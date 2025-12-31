@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, ChevronDown, Globe, Phone, User, LogOut, LayoutDashboard } from 'lucide-react';
+import { Menu, X, ChevronDown, Globe, Phone, User, LogOut, LayoutDashboard, History } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -125,6 +125,10 @@ const Header = () => {
                       {t('Dashboard', 'ড্যাশবোর্ড')}
                     </DropdownMenuItem>
                   )}
+                  <DropdownMenuItem onClick={() => navigate('/valuation/history')}>
+                    <History className="h-4 w-4 mr-2" />
+                    {t('My Valuations', 'আমার মূল্যায়ন')}
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleLogout} className="text-destructive">
                     <LogOut className="h-4 w-4 mr-2" />
                     {t('Logout', 'লগআউট')}
