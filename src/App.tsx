@@ -12,6 +12,7 @@ import Sell from "./pages/Sell";
 import Development from "./pages/Development";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
+import PropertyDetails from "./pages/PropertyDetails";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -32,6 +33,7 @@ const App = () => (
             <Route path="/development" element={<Development />} />
             <Route path="/about" element={<About />} />
             <Route path="/contact" element={<Contact />} />
+            <Route path="/property/:id" element={<PropertyDetails />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
