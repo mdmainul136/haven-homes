@@ -15,6 +15,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { properties } from '@/data/properties';
 import Layout from '@/components/layout/Layout';
 import MortgageCalculator from '@/components/MortgageCalculator';
+import ScheduleViewing from '@/components/ScheduleViewing';
 import { toast } from 'sonner';
 
 const amenityIcons: Record<string, React.ElementType> = {
@@ -393,10 +394,7 @@ const PropertyDetails = () => {
                         <Mail className="h-5 w-5 text-accent" />
                         {t('Email Agent', 'এজেন্টকে ইমেইল করুন')}
                       </Button>
-                      <Button variant="outline" className="w-full justify-start gap-3">
-                        <Calendar className="h-5 w-5 text-accent" />
-                        {t('Schedule Visit', 'ভিজিট সময়সূচি করুন')}
-                      </Button>
+                      <ScheduleViewing propertyTitle={t(property.title, property.titleBn)} />
                     </div>
                   </CardContent>
                 </Card>
