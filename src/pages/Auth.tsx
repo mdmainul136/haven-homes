@@ -20,7 +20,7 @@ const signupSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters').max(100),
   email: z.string().email('Please enter a valid email'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
-  role: z.enum(['user', 'vendor']),
+  role: z.enum(['user', 'vendor', 'admin']),
 });
 
 export default function Auth() {
@@ -37,7 +37,7 @@ export default function Auth() {
   const [signupName, setSignupName] = useState('');
   const [signupEmail, setSignupEmail] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
-  const [signupRole, setSignupRole] = useState<'user' | 'vendor'>('user');
+  const [signupRole, setSignupRole] = useState<'user' | 'vendor' | 'admin'>('user');
 
   // Redirect if already authenticated
   if (isAuthenticated) {
@@ -197,13 +197,14 @@ export default function Auth() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="signup-role">Account Type</Label>
-                  <Select value={signupRole} onValueChange={(value: 'user' | 'vendor') => setSignupRole(value)}>
+                  <Select value={signupRole} onValueChange={(value: 'user' | 'vendor' | 'admin') => setSignupRole(value)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select account type" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="user">Buyer / Renter</SelectItem>
                       <SelectItem value="vendor">Property Vendor</SelectItem>
+                      <SelectItem value="admin">Administrator</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
