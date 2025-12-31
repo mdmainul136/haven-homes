@@ -1,1 +1,10 @@
 project_id = "lofzfrmwtlsugmlzbrfn"
+
+[functions.mongodb]
+verify_jwt = false
+
+[functions.auth-mongodb]
+verify_jwt = false
+
+[functions.properties-mongodb]
+verify_jwt = false
