@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, SlidersHorizontal } from 'lucide-react';
+import { Search, SlidersHorizontal, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -7,13 +7,13 @@ import { Badge } from '@/components/ui/badge';
 import Layout from '@/components/layout/Layout';
 import PropertyCard from '@/components/PropertyCard';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { properties } from '@/data/properties';
+import { useProperties } from '@/hooks/useProperties';
 
 const Rent = () => {
   const { t } = useLanguage();
   const [showFilters, setShowFilters] = useState(false);
 
-  const rentalProperties = properties.filter(p => p.type === 'rent');
+  const { properties: rentalProperties, isLoading } = useProperties({ listingType: 'rent' });
 
   return (
     <Layout>
@@ -107,17 +107,21 @@ const Rent = () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {rentalProperties.map((property) => (
-              <PropertyCard key={property.id} {...property} />
-            ))}
-          </div>
-
-          {rentalProperties.length === 0 && (
+          {isLoading ? (
+            <div className="flex items-center justify-center py-20">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : rentalProperties.length === 0 ? (
             <div className="text-center py-20">
               <p className="text-xl text-muted-foreground">
                 {t('No rental properties found. Check back soon!', 'কোন ভাড়া সম্পত্তি পাওয়া যায়নি। শীঘ্রই আবার দেখুন!')}
               </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {rentalProperties.map((property) => (
+                <PropertyCard key={property.id} {...property} />
+              ))}
             </div>
           )}
         </div>

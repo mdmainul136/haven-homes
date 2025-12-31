@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, SlidersHorizontal, Grid, List as ListIcon } from 'lucide-react';
+import { Search, SlidersHorizontal, Grid, List as ListIcon, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -8,15 +8,15 @@ import { Checkbox } from '@/components/ui/checkbox';
 import Layout from '@/components/layout/Layout';
 import PropertyCard from '@/components/PropertyCard';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { properties } from '@/data/properties';
+import { useProperties } from '@/hooks/useProperties';
 
 const Buy = () => {
   const { t } = useLanguage();
   const [showFilters, setShowFilters] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [priceRange, setPriceRange] = useState([0, 100]);
-
-  const saleProperties = properties.filter(p => p.type === 'sale' || p.type === 'project');
+  
+  const { properties: saleProperties, isLoading } = useProperties({ listingType: 'sale' });
 
   return (
     <Layout>
@@ -186,11 +186,23 @@ const Buy = () => {
           </div>
 
           {/* Property Grid */}
-          <div className={`grid gap-8 ${viewMode === 'grid' ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'}`}>
-            {saleProperties.map((property) => (
-              <PropertyCard key={property.id} {...property} />
-            ))}
-          </div>
+          {isLoading ? (
+            <div className="flex items-center justify-center py-20">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : saleProperties.length === 0 ? (
+            <div className="text-center py-20">
+              <p className="text-xl text-muted-foreground">
+                {t('No properties found. Check back soon!', 'কোন সম্পত্তি পাওয়া যায়নি। শীঘ্রই আবার দেখুন!')}
+              </p>
+            </div>
+          ) : (
+            <div className={`grid gap-8 ${viewMode === 'grid' ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'}`}>
+              {saleProperties.map((property) => (
+                <PropertyCard key={property.id} {...property} />
+              ))}
+            </div>
+          )}
         </div>
       </section>
     </Layout>
