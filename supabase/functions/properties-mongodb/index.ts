@@ -1,24 +1,15 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { MongoClient, ObjectId } from "https://deno.land/x/mongo@v0.32.0/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-let client: MongoClient | null = null;
-
-async function getDatabase() {
-  if (!client) {
-    const mongoUri = Deno.env.get('MONGODB_URI');
-    if (!mongoUri) {
-      throw new Error('MONGODB_URI is not configured');
-    }
-    client = new MongoClient();
-    await client.connect(mongoUri);
-  }
-  return client.database("realestate");
-}
+// MongoDB Data API configuration
+const MONGODB_DATA_API_KEY = Deno.env.get('MONGODB_DATA_API_KEY');
+const MONGODB_APP_ID = Deno.env.get('MONGODB_APP_ID');
+const DATA_API_URL = `https://data.mongodb-api.com/app/${MONGODB_APP_ID}/endpoint/data/v1`;
+const DATABASE = 'haven_homes';
 
 interface PropertyFilters {
   type?: string;
@@ -27,13 +18,29 @@ interface PropertyFilters {
   location?: string;
   bedrooms?: number;
   status?: string;
+  listingType?: string;
+  featured?: boolean;
+  isOurProject?: boolean;
 }
 
-interface PropertyDoc {
-  _id: ObjectId;
-  title?: string;
-  views?: number;
-  inquiryCount?: number;
+async function mongoRequest(action: string, collection: string, data: Record<string, unknown> = {}) {
+  const response = await fetch(`${DATA_API_URL}/action/${action}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'api-key': MONGODB_DATA_API_KEY!,
+    },
+    body: JSON.stringify({
+      dataSource: 'Cluster0',
+      database: DATABASE,
+      collection,
+      ...data,
+    }),
+  });
+  
+  const result = await response.json();
+  console.log(`MongoDB ${action} on ${collection}:`, JSON.stringify(result).substring(0, 500));
+  return result;
 }
 
 serve(async (req) => {
@@ -42,146 +49,205 @@ serve(async (req) => {
   }
 
   try {
+    // Validate API key is configured
+    if (!MONGODB_DATA_API_KEY || !MONGODB_APP_ID) {
+      throw new Error('MongoDB Data API is not configured. Please add MONGODB_DATA_API_KEY and MONGODB_APP_ID secrets.');
+    }
+
     const { action, data, id, filters, vendorId } = await req.json();
-    const db = await getDatabase();
-    const properties = db.collection("properties");
-    const favorites = db.collection("favorites");
-    const inquiries = db.collection("inquiries");
+    console.log(`Properties action: ${action}`);
 
     let result;
 
     switch (action) {
       // Properties CRUD
       case 'getProperties': {
-        const query: Record<string, unknown> = { status: 'active' }; // Only show approved properties
+        const query: Record<string, unknown> = { status: 'active' };
         const typedFilters = filters as PropertyFilters | undefined;
+        
         if (typedFilters) {
           if (typedFilters.type) query.type = typedFilters.type;
-          if (typedFilters.minPrice) query.price = { $gte: typedFilters.minPrice };
-          if (typedFilters.maxPrice) {
-            query.price = { ...(query.price as object || {}), $lte: typedFilters.maxPrice };
+          if (typedFilters.listingType) query.listingType = typedFilters.listingType;
+          if (typedFilters.featured !== undefined) query.featured = typedFilters.featured;
+          if (typedFilters.isOurProject !== undefined) query.isOurProject = typedFilters.isOurProject;
+          if (typedFilters.minPrice || typedFilters.maxPrice) {
+            query.price = {};
+            if (typedFilters.minPrice) (query.price as Record<string, number>)['$gte'] = typedFilters.minPrice;
+            if (typedFilters.maxPrice) (query.price as Record<string, number>)['$lte'] = typedFilters.maxPrice;
           }
-          if (typedFilters.location) query.location = { $regex: typedFilters.location, $options: 'i' };
+          if (typedFilters.location) {
+            query.location = { $regex: typedFilters.location, $options: 'i' };
+          }
           if (typedFilters.bedrooms) query.bedrooms = typedFilters.bedrooms;
         }
-        result = await properties.find(query).toArray();
+        
+        const response = await mongoRequest('find', 'properties', { filter: query });
+        result = response.documents || [];
         break;
       }
 
       case 'getProperty': {
-        result = await properties.findOne({ _id: new ObjectId(id) });
+        const response = await mongoRequest('findOne', 'properties', {
+          filter: { _id: { $oid: id } }
+        });
+        result = response.document;
         break;
       }
 
       case 'createProperty': {
-        result = await properties.insertOne({
-          ...data,
-          vendorId,
-          views: 0,
-          inquiryCount: 0,
-          status: 'pending', // Requires admin approval
-          createdAt: new Date(),
-          updatedAt: new Date(),
+        const response = await mongoRequest('insertOne', 'properties', {
+          document: {
+            ...data,
+            vendorId,
+            views: 0,
+            inquiryCount: 0,
+            status: 'pending',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          }
         });
+        result = { insertedId: response.insertedId };
         break;
       }
 
       case 'updateProperty': {
-        result = await properties.updateOne(
-          { _id: new ObjectId(id), vendorId },
-          { $set: { ...data, updatedAt: new Date() } }
-        );
+        const response = await mongoRequest('updateOne', 'properties', {
+          filter: { _id: { $oid: id }, vendorId },
+          update: { $set: { ...data, updatedAt: new Date().toISOString() } }
+        });
+        result = response;
         break;
       }
 
       case 'deleteProperty': {
-        result = await properties.deleteOne({ _id: new ObjectId(id), vendorId });
+        const response = await mongoRequest('deleteOne', 'properties', {
+          filter: { _id: { $oid: id }, vendorId }
+        });
+        result = response;
         break;
       }
 
       // Vendor properties
       case 'getVendorProperties': {
-        result = await properties.find({ vendorId }).toArray();
+        const response = await mongoRequest('find', 'properties', {
+          filter: { vendorId }
+        });
+        result = response.documents || [];
         break;
       }
 
       // Favorites
       case 'getFavorites': {
-        const userFavorites = await favorites.find({ userId: data.userId }).toArray();
-        const propertyIds = userFavorites.map(f => new ObjectId(f.propertyId as string));
-        result = await properties.find({ _id: { $in: propertyIds } }).toArray();
+        const favsResponse = await mongoRequest('find', 'favorites', {
+          filter: { userId: data.userId }
+        });
+        const favs = favsResponse.documents || [];
+        
+        if (favs.length === 0) {
+          result = [];
+        } else {
+          const propertyIds = favs.map((f: { propertyId: string }) => ({ $oid: f.propertyId }));
+          const propsResponse = await mongoRequest('find', 'properties', {
+            filter: { _id: { $in: propertyIds } }
+          });
+          result = propsResponse.documents || [];
+        }
         break;
       }
 
       case 'addFavorite': {
-        const existing = await favorites.findOne({ 
-          userId: data.userId, 
-          propertyId: data.propertyId 
+        const existingResponse = await mongoRequest('findOne', 'favorites', {
+          filter: { userId: data.userId, propertyId: data.propertyId }
         });
-        if (!existing) {
-          result = await favorites.insertOne({
-            userId: data.userId,
-            propertyId: data.propertyId,
-            createdAt: new Date(),
+        
+        if (!existingResponse.document) {
+          const response = await mongoRequest('insertOne', 'favorites', {
+            document: {
+              userId: data.userId,
+              propertyId: data.propertyId,
+              createdAt: new Date().toISOString(),
+            }
           });
+          result = response;
         } else {
-          result = existing;
+          result = existingResponse.document;
         }
         break;
       }
 
       case 'removeFavorite': {
-        result = await favorites.deleteOne({ 
-          userId: data.userId, 
-          propertyId: data.propertyId 
+        const response = await mongoRequest('deleteOne', 'favorites', {
+          filter: { userId: data.userId, propertyId: data.propertyId }
         });
+        result = response;
         break;
       }
 
       // Inquiries
       case 'createInquiry': {
-        result = await inquiries.insertOne({
-          ...data,
-          status: 'pending',
-          createdAt: new Date(),
-          updatedAt: new Date(),
+        const response = await mongoRequest('insertOne', 'inquiries', {
+          document: {
+            ...data,
+            status: 'pending',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          }
         });
+        
         // Update inquiry count
-        await properties.updateOne(
-          { _id: new ObjectId(data.propertyId) },
-          { $inc: { inquiryCount: 1 } }
-        );
+        await mongoRequest('updateOne', 'properties', {
+          filter: { _id: { $oid: data.propertyId } },
+          update: { $inc: { inquiryCount: 1 } }
+        });
+        
+        result = response;
         break;
       }
 
       case 'getVendorInquiries': {
-        const vendorProps = await properties.find({ vendorId }).toArray();
-        const propIds = vendorProps.map(p => (p as PropertyDoc)._id.toString());
-        result = await inquiries.find({ propertyId: { $in: propIds } }).toArray();
+        const propsResponse = await mongoRequest('find', 'properties', {
+          filter: { vendorId }
+        });
+        const props = propsResponse.documents || [];
+        const propIds = props.map((p: { _id: string }) => p._id);
+        
+        const inqResponse = await mongoRequest('find', 'inquiries', {
+          filter: { propertyId: { $in: propIds } }
+        });
+        result = inqResponse.documents || [];
         break;
       }
 
       case 'updateInquiryStatus': {
-        result = await inquiries.updateOne(
-          { _id: new ObjectId(id) },
-          { $set: { status: data.status, updatedAt: new Date() } }
-        );
+        const response = await mongoRequest('updateOne', 'inquiries', {
+          filter: { _id: { $oid: id } },
+          update: { $set: { status: data.status, updatedAt: new Date().toISOString() } }
+        });
+        result = response;
         break;
       }
 
       // Analytics
       case 'getVendorAnalytics': {
-        const vendorProps = await properties.find({ vendorId }).toArray() as PropertyDoc[];
-        const propIds = vendorProps.map(p => p._id.toString());
-        const totalInquiries = await inquiries.countDocuments({ propertyId: { $in: propIds } });
-        const totalViews = vendorProps.reduce((sum, p) => sum + (p.views || 0), 0);
+        const propsResponse = await mongoRequest('find', 'properties', {
+          filter: { vendorId }
+        });
+        const props = propsResponse.documents || [];
+        const propIds = props.map((p: { _id: string }) => p._id);
+        
+        const inqResponse = await mongoRequest('find', 'inquiries', {
+          filter: { propertyId: { $in: propIds } }
+        });
+        const inquiries = inqResponse.documents || [];
+        
+        const totalViews = props.reduce((sum: number, p: { views?: number }) => sum + (p.views || 0), 0);
         
         result = {
-          totalProperties: vendorProps.length,
-          totalInquiries,
+          totalProperties: props.length,
+          totalInquiries: inquiries.length,
           totalViews,
-          properties: vendorProps.map(p => ({
-            id: p._id.toString(),
+          properties: props.map((p: { _id: string; title?: string; views?: number; inquiryCount?: number }) => ({
+            id: p._id,
             title: p.title,
             views: p.views || 0,
             inquiries: p.inquiryCount || 0,
@@ -191,38 +257,56 @@ serve(async (req) => {
       }
 
       case 'incrementViews': {
-        result = await properties.updateOne(
-          { _id: new ObjectId(id) },
-          { $inc: { views: 1 } }
-        );
+        const response = await mongoRequest('updateOne', 'properties', {
+          filter: { _id: { $oid: id } },
+          update: { $inc: { views: 1 } }
+        });
+        result = response;
         break;
       }
 
       // Admin actions
       case 'getPendingProperties': {
-        result = await properties.find({ status: 'pending' }).toArray();
+        const response = await mongoRequest('find', 'properties', {
+          filter: { status: 'pending' }
+        });
+        result = response.documents || [];
         break;
       }
 
       case 'approveProperty': {
-        result = await properties.updateOne(
-          { _id: new ObjectId(id) },
-          { $set: { status: 'active', approvedAt: new Date(), updatedAt: new Date() } }
-        );
+        const response = await mongoRequest('updateOne', 'properties', {
+          filter: { _id: { $oid: id } },
+          update: { 
+            $set: { 
+              status: 'active', 
+              approvedAt: new Date().toISOString(), 
+              updatedAt: new Date().toISOString() 
+            } 
+          }
+        });
+        result = response;
         break;
       }
 
       case 'rejectProperty': {
-        result = await properties.updateOne(
-          { _id: new ObjectId(id) },
-          { $set: { status: 'rejected', rejectedAt: new Date(), updatedAt: new Date() } }
-        );
+        const response = await mongoRequest('updateOne', 'properties', {
+          filter: { _id: { $oid: id } },
+          update: { 
+            $set: { 
+              status: 'rejected', 
+              rejectedAt: new Date().toISOString(), 
+              updatedAt: new Date().toISOString() 
+            } 
+          }
+        });
+        result = response;
         break;
       }
 
       case 'getAllProperties': {
-        // Admin can see all properties regardless of status
-        result = await properties.find({}).toArray();
+        const response = await mongoRequest('find', 'properties', {});
+        result = response.documents || [];
         break;
       }
 

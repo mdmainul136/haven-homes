@@ -1,23 +1,32 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { MongoClient, ObjectId } from "https://deno.land/x/mongo@v0.32.0/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-let client: MongoClient | null = null;
+// MongoDB Data API configuration
+const MONGODB_DATA_API_KEY = Deno.env.get('MONGODB_DATA_API_KEY');
+const MONGODB_APP_ID = Deno.env.get('MONGODB_APP_ID');
+const DATA_API_URL = `https://data.mongodb-api.com/app/${MONGODB_APP_ID}/endpoint/data/v1`;
+const DATABASE = 'haven_homes';
 
-async function getDatabase() {
-  if (!client) {
-    const mongoUri = Deno.env.get('MONGODB_URI');
-    if (!mongoUri) {
-      throw new Error('MONGODB_URI is not configured');
-    }
-    client = new MongoClient();
-    await client.connect(mongoUri);
-  }
-  return client.database("realestate");
+async function mongoRequest(action: string, collection: string, data: Record<string, unknown> = {}) {
+  const response = await fetch(`${DATA_API_URL}/action/${action}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'api-key': MONGODB_DATA_API_KEY!,
+    },
+    body: JSON.stringify({
+      dataSource: 'Cluster0',
+      database: DATABASE,
+      collection,
+      ...data,
+    }),
+  });
+  
+  return await response.json();
 }
 
 serve(async (req) => {
@@ -26,54 +35,78 @@ serve(async (req) => {
   }
 
   try {
+    // Validate API key is configured
+    if (!MONGODB_DATA_API_KEY || !MONGODB_APP_ID) {
+      throw new Error('MongoDB Data API is not configured. Please add MONGODB_DATA_API_KEY and MONGODB_APP_ID secrets.');
+    }
+
     const { action, collection, data, query, id } = await req.json();
-    const db = await getDatabase();
-    const coll = db.collection(collection);
+    console.log(`MongoDB action: ${action} on collection: ${collection}`);
 
     let result;
 
     switch (action) {
       case 'find':
-        result = await coll.find(query || {}).toArray();
+        const findResponse = await mongoRequest('find', collection, { filter: query || {} });
+        result = findResponse.documents || [];
         break;
       
       case 'findOne':
         if (id) {
-          result = await coll.findOne({ _id: new ObjectId(id) });
+          const findOneResponse = await mongoRequest('findOne', collection, { 
+            filter: { _id: { $oid: id } } 
+          });
+          result = findOneResponse.document;
         } else {
-          result = await coll.findOne(query || {});
+          const findOneResponse = await mongoRequest('findOne', collection, { 
+            filter: query || {} 
+          });
+          result = findOneResponse.document;
         }
         break;
       
       case 'insert':
-        result = await coll.insertOne({
-          ...data,
-          createdAt: new Date(),
-          updatedAt: new Date(),
+        const insertResponse = await mongoRequest('insertOne', collection, {
+          document: {
+            ...data,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          }
         });
+        result = { insertedId: insertResponse.insertedId };
         break;
       
       case 'insertMany':
-        result = await coll.insertMany(data.map((item: Record<string, unknown>) => ({
-          ...item,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        })));
+        const insertManyResponse = await mongoRequest('insertMany', collection, {
+          documents: data.map((item: Record<string, unknown>) => ({
+            ...item,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          }))
+        });
+        result = insertManyResponse;
         break;
       
       case 'update':
-        result = await coll.updateOne(
-          { _id: new ObjectId(id) },
-          { $set: { ...data, updatedAt: new Date() } }
-        );
+        const updateResponse = await mongoRequest('updateOne', collection, {
+          filter: { _id: { $oid: id } },
+          update: { $set: { ...data, updatedAt: new Date().toISOString() } }
+        });
+        result = updateResponse;
         break;
       
       case 'delete':
-        result = await coll.deleteOne({ _id: new ObjectId(id) });
+        const deleteResponse = await mongoRequest('deleteOne', collection, {
+          filter: { _id: { $oid: id } }
+        });
+        result = deleteResponse;
         break;
       
       case 'aggregate':
-        result = await coll.aggregate(data).toArray();
+        const aggResponse = await mongoRequest('aggregate', collection, {
+          pipeline: data
+        });
+        result = aggResponse.documents || [];
         break;
       
       default:
