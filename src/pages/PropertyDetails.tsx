@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { properties } from '@/data/properties';
 import Layout from '@/components/layout/Layout';
+import MortgageCalculator from '@/components/MortgageCalculator';
 import { toast } from 'sonner';
 
 const amenityIcons: Record<string, React.ElementType> = {
@@ -318,8 +319,12 @@ const PropertyDetails = () => {
               </Card>
             </div>
 
-            {/* Sidebar - Contact Form */}
-            <div className="lg:col-span-1">
+            {/* Sidebar */}
+            <div className="lg:col-span-1 space-y-6">
+              {/* Mortgage Calculator */}
+              <MortgageCalculator defaultPrice={10000000} />
+
+              {/* Contact Form */}
               <div className="sticky top-24">
                 <Card className="border-0 shadow-elevated">
                   <CardHeader className="bg-primary text-primary-foreground rounded-t-lg">
