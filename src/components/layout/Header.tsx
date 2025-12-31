@@ -30,6 +30,7 @@ const Header = () => {
     { path: '/buy', label: t('Buy', 'কিনুন') },
     { path: '/rent', label: t('Rent', 'ভাড়া') },
     { path: '/search', label: t('Advanced Search', 'উন্নত অনুসন্ধান') },
+    { path: '/valuation', label: t('Valuation', 'মূল্যায়ন') },
     { path: '/sell', label: t('Sell Property', 'সম্পত্তি বিক্রি') },
     { path: '/development', label: t('Development', 'ডেভেলপমেন্ট') },
     { path: '/about', label: t('About Us', 'আমাদের সম্পর্কে') },
