@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, ChevronDown, Globe, Phone, User, LogOut } from 'lucide-react';
+import { Menu, X, ChevronDown, Globe, Phone, User, LogOut, LayoutDashboard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -112,6 +112,12 @@ const Header = () => {
                     {user?.role === 'vendor' ? 'Vendor Account' : 'Buyer Account'}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
+                  {user?.role === 'vendor' && (
+                    <DropdownMenuItem onClick={() => navigate('/vendor/dashboard')}>
+                      <LayoutDashboard className="h-4 w-4 mr-2" />
+                      {t('Dashboard', 'ড্যাশবোর্ড')}
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem onClick={handleLogout} className="text-destructive">
                     <LogOut className="h-4 w-4 mr-2" />
                     {t('Logout', 'লগআউট')}
@@ -160,10 +166,20 @@ const Header = () => {
                 </Link>
               ))}
               {isAuthenticated ? (
-                <Button variant="outline" className="w-full mt-2" onClick={() => { handleLogout(); setIsMenuOpen(false); }}>
-                  <LogOut className="h-4 w-4 mr-2" />
-                  {t('Logout', 'লগআউট')}
-                </Button>
+                <>
+                  {user?.role === 'vendor' && (
+                    <Link to="/vendor/dashboard" onClick={() => setIsMenuOpen(false)}>
+                      <Button variant="outline" className="w-full mt-2">
+                        <LayoutDashboard className="h-4 w-4 mr-2" />
+                        {t('Dashboard', 'ড্যাশবোর্ড')}
+                      </Button>
+                    </Link>
+                  )}
+                  <Button variant="outline" className="w-full mt-2" onClick={() => { handleLogout(); setIsMenuOpen(false); }}>
+                    <LogOut className="h-4 w-4 mr-2" />
+                    {t('Logout', 'লগআউট')}
+                  </Button>
+                </>
               ) : (
                 <Link to="/auth" onClick={() => setIsMenuOpen(false)}>
                   <Button variant="outline" className="w-full mt-2">

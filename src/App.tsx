@@ -18,6 +18,7 @@ import Contact from "./pages/Contact";
 import PropertyDetails from "./pages/PropertyDetails";
 import AdvancedSearch from "./pages/AdvancedSearch";
 import Auth from "./pages/Auth";
+import VendorDashboard from "./pages/VendorDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,6 +35,7 @@ const App = () => (
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/auth" element={<Auth />} />
+                <Route path="/vendor/dashboard" element={<VendorDashboard />} />
                 <Route path="/buy" element={<Buy />} />
                 <Route path="/rent" element={<Rent />} />
                 <Route path="/projects" element={<Projects />} />
