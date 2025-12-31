@@ -1,5 +1,4 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { MongoClient } from "https://deno.land/x/mongo@v0.32.0/mod.ts";
 import { create } from "https://deno.land/x/djwt@v3.0.1/mod.ts";
 
 const corsHeaders = {
@@ -7,18 +6,35 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-let client: MongoClient | null = null;
+// MongoDB Data API configuration
+const MONGODB_DATA_API_KEY = Deno.env.get('MONGODB_DATA_API_KEY');
+const MONGODB_APP_ID = Deno.env.get('MONGODB_APP_ID');
+const DATA_API_URL = `https://data.mongodb-api.com/app/${MONGODB_APP_ID}/endpoint/data/v1`;
+const DATABASE = 'haven_homes';
 
-async function getDatabase() {
-  if (!client) {
-    const mongoUri = Deno.env.get('MONGODB_URI');
-    if (!mongoUri) {
-      throw new Error('MONGODB_URI is not configured');
-    }
-    client = new MongoClient();
-    await client.connect(mongoUri);
-  }
-  return client.database("realestate");
+interface MongoDocument {
+  _id?: string;
+  [key: string]: unknown;
+}
+
+async function mongoRequest(action: string, collection: string, data: Record<string, unknown> = {}) {
+  const response = await fetch(`${DATA_API_URL}/action/${action}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'api-key': MONGODB_DATA_API_KEY!,
+    },
+    body: JSON.stringify({
+      dataSource: 'Cluster0',
+      database: DATABASE,
+      collection,
+      ...data,
+    }),
+  });
+  
+  const result = await response.json();
+  console.log(`MongoDB ${action} on ${collection}:`, JSON.stringify(result));
+  return result;
 }
 
 async function hashPassword(password: string): Promise<string> {
@@ -56,15 +72,22 @@ serve(async (req) => {
   }
 
   try {
+    // Validate API key is configured
+    if (!MONGODB_DATA_API_KEY || !MONGODB_APP_ID) {
+      throw new Error('MongoDB Data API is not configured. Please add MONGODB_DATA_API_KEY and MONGODB_APP_ID secrets.');
+    }
+
     const { action, email, password, name, role } = await req.json();
-    const db = await getDatabase();
-    const users = db.collection("users");
-    const profiles = db.collection("profiles");
+    console.log(`Auth action: ${action} for email: ${email}`);
 
     switch (action) {
       case 'signup': {
-        const existingUser = await users.findOne({ email });
-        if (existingUser) {
+        // Check if user exists
+        const existingResult = await mongoRequest('findOne', 'users', {
+          filter: { email }
+        });
+        
+        if (existingResult.document) {
           return new Response(JSON.stringify({ 
             success: false, 
             error: 'User already exists' 
@@ -75,29 +98,38 @@ serve(async (req) => {
         }
 
         const hashedPassword = await hashPassword(password);
-        const userId = await users.insertOne({
-          email,
-          password: hashedPassword,
-          createdAt: new Date(),
-          updatedAt: new Date(),
+        
+        // Insert user
+        const userResult = await mongoRequest('insertOne', 'users', {
+          document: {
+            email,
+            password: hashedPassword,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          }
         });
 
-        await profiles.insertOne({
-          userId: userId.toString(),
-          email,
-          name: name || '',
-          role: role || 'user',
-          createdAt: new Date(),
-          updatedAt: new Date(),
+        const userId = userResult.insertedId;
+
+        // Insert profile
+        await mongoRequest('insertOne', 'profiles', {
+          document: {
+            userId: userId,
+            email,
+            name: name || '',
+            role: role || 'user',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          }
         });
 
-        const token = await generateToken(userId.toString(), email);
+        const token = await generateToken(userId, email);
 
         return new Response(JSON.stringify({ 
           success: true, 
           data: { 
             token, 
-            user: { id: userId.toString(), email, name, role: role || 'user' } 
+            user: { id: userId, email, name, role: role || 'user' } 
           } 
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -105,7 +137,12 @@ serve(async (req) => {
       }
 
       case 'login': {
-        const user = await users.findOne({ email });
+        // Find user
+        const userResult = await mongoRequest('findOne', 'users', {
+          filter: { email }
+        });
+        
+        const user = userResult.document;
         if (!user) {
           return new Response(JSON.stringify({ 
             success: false, 
@@ -127,15 +164,20 @@ serve(async (req) => {
           });
         }
 
-        const profile = await profiles.findOne({ userId: user._id.toString() });
-        const token = await generateToken(user._id.toString(), email);
+        // Get profile
+        const profileResult = await mongoRequest('findOne', 'profiles', {
+          filter: { userId: user._id }
+        });
+        const profile = profileResult.document;
+        
+        const token = await generateToken(user._id, email);
 
         return new Response(JSON.stringify({ 
           success: true, 
           data: { 
             token, 
             user: { 
-              id: user._id.toString(), 
+              id: user._id, 
               email, 
               name: profile?.name || '',
               role: profile?.role || 'user'
