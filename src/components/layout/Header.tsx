@@ -1,19 +1,28 @@
 import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, ChevronDown, Globe, Phone } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Menu, X, ChevronDown, Globe, Phone, User, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { language, setLanguage, t } = useLanguage();
+  const { user, isAuthenticated, logout } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+  };
 
   const navLinks = [
     { path: '/', label: t('Home', 'হোম') },
@@ -87,8 +96,35 @@ const Header = () => {
             ))}
           </nav>
 
-          {/* CTA Button */}
+          {/* CTA Button & Auth */}
           <div className="hidden lg:flex items-center gap-3">
+            {isAuthenticated ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="gap-2">
+                    <User className="h-4 w-4" />
+                    {user?.name || user?.email}
+                    <ChevronDown className="h-3 w-3" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem className="text-muted-foreground text-xs">
+                    {user?.role === 'vendor' ? 'Vendor Account' : 'Buyer Account'}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout} className="text-destructive">
+                    <LogOut className="h-4 w-4 mr-2" />
+                    {t('Logout', 'লগআউট')}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Link to="/auth">
+                <Button variant="outline">
+                  {t('Login', 'লগইন')}
+                </Button>
+              </Link>
+            )}
             <Link to="/sell">
               <Button className="bg-gradient-gold text-primary hover:opacity-90 shadow-gold font-semibold">
                 {t('List Your Property', 'আপনার সম্পত্তি লিস্ট করুন')}
@@ -123,6 +159,18 @@ const Header = () => {
                   {link.label}
                 </Link>
               ))}
+              {isAuthenticated ? (
+                <Button variant="outline" className="w-full mt-2" onClick={() => { handleLogout(); setIsMenuOpen(false); }}>
+                  <LogOut className="h-4 w-4 mr-2" />
+                  {t('Logout', 'লগআউট')}
+                </Button>
+              ) : (
+                <Link to="/auth" onClick={() => setIsMenuOpen(false)}>
+                  <Button variant="outline" className="w-full mt-2">
+                    {t('Login / Sign Up', 'লগইন / সাইন আপ')}
+                  </Button>
+                </Link>
+              )}
               <Link to="/sell" onClick={() => setIsMenuOpen(false)}>
                 <Button className="w-full mt-2 bg-gradient-gold text-primary hover:opacity-90 shadow-gold font-semibold">
                   {t('List Your Property', 'আপনার সম্পত্তি লিস্ট করুন')}

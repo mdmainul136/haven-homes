@@ -22,13 +22,26 @@ async function callFunction<T>(functionName: string, body: object): Promise<ApiR
   }
 }
 
+// Auth types
+interface AuthUser {
+  id: string;
+  email: string;
+  name?: string;
+  role: string;
+}
+
+interface AuthResponse {
+  token: string;
+  user: AuthUser;
+}
+
 // Auth API
 export const authApi = {
   signup: (email: string, password: string, name?: string, role?: string) =>
-    callFunction('auth-mongodb', { action: 'signup', email, password, name, role }),
+    callFunction<AuthResponse>('auth-mongodb', { action: 'signup', email, password, name, role }),
   
   login: (email: string, password: string) =>
-    callFunction('auth-mongodb', { action: 'login', email, password }),
+    callFunction<AuthResponse>('auth-mongodb', { action: 'login', email, password }),
 };
 
 // Properties API
