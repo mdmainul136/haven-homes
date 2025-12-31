@@ -14,7 +14,60 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      valuations: {
+        Row: {
+          age: number | null
+          amenities: string[] | null
+          area: number
+          bathrooms: string | null
+          bedrooms: string | null
+          condition: string
+          created_at: string
+          estimated_value: number
+          high_estimate: number
+          id: string
+          location: string
+          low_estimate: number
+          price_per_sqft: number
+          property_type: string
+          user_id: string
+        }
+        Insert: {
+          age?: number | null
+          amenities?: string[] | null
+          area: number
+          bathrooms?: string | null
+          bedrooms?: string | null
+          condition: string
+          created_at?: string
+          estimated_value: number
+          high_estimate: number
+          id?: string
+          location: string
+          low_estimate: number
+          price_per_sqft: number
+          property_type: string
+          user_id: string
+        }
+        Update: {
+          age?: number | null
+          amenities?: string[] | null
+          area?: number
+          bathrooms?: string | null
+          bedrooms?: string | null
+          condition?: string
+          created_at?: string
+          estimated_value?: number
+          high_estimate?: number
+          id?: string
+          location?: string
+          low_estimate?: number
+          price_per_sqft?: number
+          property_type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
