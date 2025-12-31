@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.send-valuation-alert]
 verify_jwt = false
+
+[functions.check-valuation-changes]
+verify_jwt = false
