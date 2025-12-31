@@ -10,7 +10,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Calculator, Home, MapPin, TrendingUp, Building2, Bath, BedDouble, Ruler, Download, Save, BarChart3, ArrowUp, ArrowDown } from 'lucide-react';
+import { Calculator, Home, MapPin, TrendingUp, Building2, Bath, BedDouble, Ruler, Download, Save, BarChart3, ArrowUp, ArrowDown, Bell, Mail, Trash2 } from 'lucide-react';
 import jsPDF from 'jspdf';
 
 interface MarketData {
@@ -29,6 +29,13 @@ interface SimilarProperty {
   type: string;
 }
 
+interface Subscription {
+  id: string;
+  location: string;
+  threshold_percentage: number;
+  created_at: string;
+}
+
 const PropertyValuation = () => {
   const { t } = useLanguage();
   const { user, isAuthenticated } = useAuth();
@@ -39,6 +46,10 @@ const PropertyValuation = () => {
   const [valuationResult, setValuationResult] = useState<number | null>(null);
   const [marketData, setMarketData] = useState<MarketData | null>(null);
   const [similarProperties, setSimilarProperties] = useState<SimilarProperty[]>([]);
+  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const [isSubscribing, setIsSubscribing] = useState(false);
+  const [alertEmail, setAlertEmail] = useState('');
+  const [alertThreshold, setAlertThreshold] = useState('10');
   
   const [formData, setFormData] = useState({
     propertyType: '',
@@ -50,6 +61,100 @@ const PropertyValuation = () => {
     condition: '',
     amenities: [] as string[],
   });
+
+  // Fetch user subscriptions
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      fetchSubscriptions();
+    }
+  }, [isAuthenticated, user]);
+
+  const fetchSubscriptions = async () => {
+    if (!user) return;
+    
+    const { data, error } = await supabase
+      .from('valuation_subscriptions')
+      .select('*')
+      .eq('user_id', user.id);
+    
+    if (!error && data) {
+      setSubscriptions(data as Subscription[]);
+    }
+  };
+
+  const subscribeToAlerts = async () => {
+    if (!isAuthenticated || !user || !formData.location) {
+      toast({
+        title: t('Please log in', 'অনুগ্রহ করে লগইন করুন'),
+        description: t('You need to be logged in to subscribe to alerts', 'সতর্কতা সাবস্ক্রাইব করতে আপনাকে লগইন করতে হবে'),
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!alertEmail) {
+      toast({
+        title: t('Email required', 'ইমেইল প্রয়োজন'),
+        description: t('Please enter your email address', 'অনুগ্রহ করে আপনার ইমেইল ঠিকানা দিন'),
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSubscribing(true);
+    try {
+      const { error } = await supabase.from('valuation_subscriptions').insert({
+        user_id: user.id,
+        email: alertEmail,
+        location: formData.location,
+        threshold_percentage: parseFloat(alertThreshold) || 10,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: t('Subscribed!', 'সাবস্ক্রাইব করা হয়েছে!'),
+        description: t(`You'll receive alerts when property values in ${formData.location} change by ${alertThreshold}% or more.`, `${formData.location}-এ সম্পত্তির মান ${alertThreshold}% বা তার বেশি পরিবর্তন হলে আপনি সতর্কতা পাবেন।`),
+      });
+      
+      setAlertEmail('');
+      fetchSubscriptions();
+    } catch (error) {
+      console.error('Error subscribing:', error);
+      toast({
+        title: t('Error', 'ত্রুটি'),
+        description: t('Failed to subscribe to alerts', 'সতর্কতা সাবস্ক্রাইব করতে ব্যর্থ'),
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubscribing(false);
+    }
+  };
+
+  const unsubscribe = async (subscriptionId: string) => {
+    try {
+      const { error } = await supabase
+        .from('valuation_subscriptions')
+        .delete()
+        .eq('id', subscriptionId);
+
+      if (error) throw error;
+
+      toast({
+        title: t('Unsubscribed', 'আনসাবস্ক্রাইব করা হয়েছে'),
+        description: t('You will no longer receive alerts for this location', 'আপনি এই অবস্থানের জন্য আর সতর্কতা পাবেন না'),
+      });
+      
+      fetchSubscriptions();
+    } catch (error) {
+      console.error('Error unsubscribing:', error);
+      toast({
+        title: t('Error', 'ত্রুটি'),
+        description: t('Failed to unsubscribe', 'আনসাবস্ক্রাইব করতে ব্যর্থ'),
+        variant: 'destructive',
+      });
+    }
+  };
 
   const locations = [
     'Gulshan, Dhaka',
@@ -808,6 +913,98 @@ const PropertyValuation = () => {
                   </CardContent>
                 </Card>
               )}
+
+              {/* Valuation Alerts Subscription */}
+              <Card className="shadow-card">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Bell className="h-5 w-5 text-accent" />
+                    {t('Get Valuation Alerts', 'মূল্যায়ন সতর্কতা পান')}
+                  </CardTitle>
+                  <CardDescription>
+                    {t('Get notified when property values in this area change significantly', 'এই এলাকায় সম্পত্তির মান উল্লেখযোগ্যভাবে পরিবর্তন হলে বিজ্ঞপ্তি পান')}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {isAuthenticated ? (
+                    <>
+                      <div className="grid md:grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                          <Label className="flex items-center gap-2">
+                            <Mail className="h-4 w-4" />
+                            {t('Email', 'ইমেইল')}
+                          </Label>
+                          <Input
+                            type="email"
+                            placeholder="your@email.com"
+                            value={alertEmail}
+                            onChange={(e) => setAlertEmail(e.target.value)}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>{t('Alert Threshold (%)', 'সতর্কতা থ্রেশহোল্ড (%)')}</Label>
+                          <Select value={alertThreshold} onValueChange={setAlertThreshold}>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="5">5%</SelectItem>
+                              <SelectItem value="10">10%</SelectItem>
+                              <SelectItem value="15">15%</SelectItem>
+                              <SelectItem value="20">20%</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="flex items-end">
+                          <Button 
+                            onClick={subscribeToAlerts} 
+                            disabled={isSubscribing}
+                            className="w-full bg-gradient-gold text-primary hover:opacity-90"
+                          >
+                            <Bell className="h-4 w-4 mr-2" />
+                            {isSubscribing ? t('Subscribing...', 'সাবস্ক্রাইব হচ্ছে...') : t('Subscribe', 'সাবস্ক্রাইব')}
+                          </Button>
+                        </div>
+                      </div>
+
+                      {subscriptions.length > 0 && (
+                        <div className="mt-4 pt-4 border-t border-border">
+                          <h4 className="font-medium mb-3">{t('Your Active Subscriptions', 'আপনার সক্রিয় সাবস্ক্রিপশন')}</h4>
+                          <div className="space-y-2">
+                            {subscriptions.map((sub) => (
+                              <div key={sub.id} className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg">
+                                <div>
+                                  <span className="font-medium">{sub.location}</span>
+                                  <Badge variant="secondary" className="ml-2">
+                                    {sub.threshold_percentage}% {t('threshold', 'থ্রেশহোল্ড')}
+                                  </Badge>
+                                </div>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => unsubscribe(sub.id)}
+                                  className="text-destructive hover:text-destructive"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="text-center py-4">
+                      <p className="text-muted-foreground mb-3">
+                        {t('Log in to subscribe to valuation alerts', 'মূল্যায়ন সতর্কতা সাবস্ক্রাইব করতে লগইন করুন')}
+                      </p>
+                      <Button variant="outline" onClick={() => window.location.href = '/auth'}>
+                        {t('Log in', 'লগইন করুন')}
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
 
               {/* Action Buttons */}
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
