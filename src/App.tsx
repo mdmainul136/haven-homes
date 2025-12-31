@@ -19,6 +19,7 @@ import PropertyDetails from "./pages/PropertyDetails";
 import AdvancedSearch from "./pages/AdvancedSearch";
 import Auth from "./pages/Auth";
 import VendorDashboard from "./pages/VendorDashboard";
+import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,6 +37,7 @@ const App = () => (
                 <Route path="/" element={<Index />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/vendor/dashboard" element={<VendorDashboard />} />
+                <Route path="/admin/dashboard" element={<AdminDashboard />} />
                 <Route path="/buy" element={<Buy />} />
                 <Route path="/rent" element={<Rent />} />
                 <Route path="/projects" element={<Projects />} />

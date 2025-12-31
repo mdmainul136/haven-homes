@@ -109,9 +109,15 @@ const Header = () => {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem className="text-muted-foreground text-xs">
-                    {user?.role === 'vendor' ? 'Vendor Account' : 'Buyer Account'}
+                    {user?.role === 'admin' ? 'Admin Account' : user?.role === 'vendor' ? 'Vendor Account' : 'Buyer Account'}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
+                  {user?.role === 'admin' && (
+                    <DropdownMenuItem onClick={() => navigate('/admin/dashboard')}>
+                      <LayoutDashboard className="h-4 w-4 mr-2" />
+                      {t('Admin Dashboard', 'অ্যাডমিন ড্যাশবোর্ড')}
+                    </DropdownMenuItem>
+                  )}
                   {user?.role === 'vendor' && (
                     <DropdownMenuItem onClick={() => navigate('/vendor/dashboard')}>
                       <LayoutDashboard className="h-4 w-4 mr-2" />
@@ -167,6 +173,14 @@ const Header = () => {
               ))}
               {isAuthenticated ? (
                 <>
+                  {user?.role === 'admin' && (
+                    <Link to="/admin/dashboard" onClick={() => setIsMenuOpen(false)}>
+                      <Button variant="outline" className="w-full mt-2">
+                        <LayoutDashboard className="h-4 w-4 mr-2" />
+                        {t('Admin Dashboard', 'অ্যাডমিন ড্যাশবোর্ড')}
+                      </Button>
+                    </Link>
+                  )}
                   {user?.role === 'vendor' && (
                     <Link to="/vendor/dashboard" onClick={() => setIsMenuOpen(false)}>
                       <Button variant="outline" className="w-full mt-2">

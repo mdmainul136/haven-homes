@@ -98,6 +98,21 @@ export const analyticsApi = {
     callFunction('properties-mongodb', { action: 'getVendorAnalytics', vendorId }),
 };
 
+// Admin API
+export const adminApi = {
+  getPendingProperties: () =>
+    callFunction('properties-mongodb', { action: 'getPendingProperties' }),
+  
+  approveProperty: (id: string) =>
+    callFunction('properties-mongodb', { action: 'approveProperty', id }),
+  
+  rejectProperty: (id: string) =>
+    callFunction('properties-mongodb', { action: 'rejectProperty', id }),
+  
+  getAllProperties: () =>
+    callFunction('properties-mongodb', { action: 'getAllProperties' }),
+};
+
 // Generic MongoDB API
 export const mongoApi = {
   find: (collection: string, query?: object) =>

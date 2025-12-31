@@ -53,7 +53,7 @@ serve(async (req) => {
     switch (action) {
       // Properties CRUD
       case 'getProperties': {
-        const query: Record<string, unknown> = {};
+        const query: Record<string, unknown> = { status: 'active' }; // Only show approved properties
         const typedFilters = filters as PropertyFilters | undefined;
         if (typedFilters) {
           if (typedFilters.type) query.type = typedFilters.type;
@@ -63,7 +63,6 @@ serve(async (req) => {
           }
           if (typedFilters.location) query.location = { $regex: typedFilters.location, $options: 'i' };
           if (typedFilters.bedrooms) query.bedrooms = typedFilters.bedrooms;
-          if (typedFilters.status) query.status = typedFilters.status;
         }
         result = await properties.find(query).toArray();
         break;
@@ -80,7 +79,7 @@ serve(async (req) => {
           vendorId,
           views: 0,
           inquiryCount: 0,
-          status: 'active',
+          status: 'pending', // Requires admin approval
           createdAt: new Date(),
           updatedAt: new Date(),
         });
@@ -196,6 +195,34 @@ serve(async (req) => {
           { _id: new ObjectId(id) },
           { $inc: { views: 1 } }
         );
+        break;
+      }
+
+      // Admin actions
+      case 'getPendingProperties': {
+        result = await properties.find({ status: 'pending' }).toArray();
+        break;
+      }
+
+      case 'approveProperty': {
+        result = await properties.updateOne(
+          { _id: new ObjectId(id) },
+          { $set: { status: 'active', approvedAt: new Date(), updatedAt: new Date() } }
+        );
+        break;
+      }
+
+      case 'rejectProperty': {
+        result = await properties.updateOne(
+          { _id: new ObjectId(id) },
+          { $set: { status: 'rejected', rejectedAt: new Date(), updatedAt: new Date() } }
+        );
+        break;
+      }
+
+      case 'getAllProperties': {
+        // Admin can see all properties regardless of status
+        result = await properties.find({}).toArray();
         break;
       }
 
