@@ -1,9 +1,12 @@
 import { Link } from 'react-router-dom';
-import { MapPin, Bed, Bath, Square, Heart } from 'lucide-react';
+import { MapPin, Bed, Bath, Square, Heart, GitCompare } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useComparison } from '@/contexts/ComparisonContext';
+import { properties } from '@/data/properties';
+import { toast } from 'sonner';
 
 interface PropertyCardProps {
   id: string;
@@ -39,6 +42,26 @@ const PropertyCard = ({
   featured,
 }: PropertyCardProps) => {
   const { t } = useLanguage();
+  const { addToComparison, removeFromComparison, isInComparison, comparisonList, maxItems } = useComparison();
+
+  const inComparison = isInComparison(id);
+
+  const handleCompareClick = () => {
+    if (inComparison) {
+      removeFromComparison(id);
+      toast.success(t('Removed from comparison', 'তুলনা থেকে সরানো হয়েছে'));
+    } else {
+      if (comparisonList.length >= maxItems) {
+        toast.error(t(`Maximum ${maxItems} properties can be compared`, `সর্বোচ্চ ${maxItems}টি প্রপার্টি তুলনা করা যাবে`));
+        return;
+      }
+      const property = properties.find(p => p.id === id);
+      if (property) {
+        addToComparison(property);
+        toast.success(t('Added to comparison', 'তুলনায় যোগ করা হয়েছে'));
+      }
+    }
+  };
 
   const typeLabels = {
     sale: t('For Sale', 'বিক্রয়ের জন্য'),
@@ -79,14 +102,28 @@ const PropertyCard = ({
           )}
         </div>
 
-        {/* Favorite Button */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="absolute top-4 right-4 bg-card/80 backdrop-blur-sm hover:bg-card text-muted-foreground hover:text-destructive"
-        >
-          <Heart className="h-5 w-5" />
-        </Button>
+        {/* Action Buttons */}
+        <div className="absolute top-4 right-4 flex flex-col gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="bg-card/80 backdrop-blur-sm hover:bg-card text-muted-foreground hover:text-destructive"
+          >
+            <Heart className="h-5 w-5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleCompareClick}
+            className={`bg-card/80 backdrop-blur-sm hover:bg-card transition-colors ${
+              inComparison 
+                ? 'text-accent bg-accent/20' 
+                : 'text-muted-foreground hover:text-accent'
+            }`}
+          >
+            <GitCompare className="h-5 w-5" />
+          </Button>
+        </div>
 
         {/* Price */}
         <div className="absolute bottom-4 left-4">
