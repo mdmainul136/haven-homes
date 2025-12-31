@@ -20,6 +20,7 @@ import AdvancedSearch from "./pages/AdvancedSearch";
 import Auth from "./pages/Auth";
 import VendorDashboard from "./pages/VendorDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
+import PropertyValuation from "./pages/PropertyValuation";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -47,6 +48,7 @@ const App = () => (
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/property/:id" element={<PropertyDetails />} />
                 <Route path="/search" element={<AdvancedSearch />} />
+                <Route path="/valuation" element={<PropertyValuation />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
               <ComparisonBar />
