@@ -21,6 +21,7 @@ import Auth from "./pages/Auth";
 import VendorDashboard from "./pages/VendorDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import PropertyValuation from "./pages/PropertyValuation";
+import ValuationHistory from "./pages/ValuationHistory";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -49,6 +50,7 @@ const App = () => (
                 <Route path="/property/:id" element={<PropertyDetails />} />
                 <Route path="/search" element={<AdvancedSearch />} />
                 <Route path="/valuation" element={<PropertyValuation />} />
+                <Route path="/valuation/history" element={<ValuationHistory />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
               <ComparisonBar />
