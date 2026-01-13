@@ -31,10 +31,7 @@ const Header = () => {
     { path: '/rent', label: t('Rent', 'ভাড়া') },
     { path: '/search', label: t('Advanced Search', 'উন্নত অনুসন্ধান') },
     { path: '/valuation', label: t('Valuation', 'মূল্যায়ন') },
-    { path: '/sell', label: t('Sell Property', 'সম্পত্তি বিক্রি') },
     { path: '/development', label: t('Development', 'ডেভেলপমেন্ট') },
-    { path: '/about', label: t('About Us', 'আমাদের সম্পর্কে') },
-    { path: '/contact', label: t('Contact', 'যোগাযোগ') },
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -50,19 +47,71 @@ const Header = () => {
               <span>+880 1700-000000</span>
             </a>
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="text-primary-foreground hover:text-accent hover:bg-primary/80">
-                <Globe className="h-4 w-4 mr-1" />
-                {language === 'en' ? 'English' : 'বাংলা'}
-                <ChevronDown className="h-3 w-3 ml-1" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setLanguage('en')}>English</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setLanguage('bn')}>বাংলা</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex items-center gap-4">
+            <Link to="/about" className="hover:text-accent transition-colors">
+              {t('About Us', 'আমাদের সম্পর্কে')}
+            </Link>
+            <Link to="/contact" className="hover:text-accent transition-colors">
+              {t('Contact', 'যোগাযোগ')}
+            </Link>
+            <Link to="/sell" className="hover:text-accent transition-colors font-medium">
+              {t('List Property', 'সম্পত্তি লিস্ট করুন')}
+            </Link>
+            {isAuthenticated ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="flex items-center gap-1 hover:text-accent transition-colors">
+                    <User className="h-3 w-3" />
+                    {user?.name || t('Account', 'অ্যাকাউন্ট')}
+                    <ChevronDown className="h-3 w-3" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem className="text-muted-foreground text-xs">
+                    {user?.role === 'admin' ? 'Admin Account' : user?.role === 'vendor' ? 'Vendor Account' : 'Buyer Account'}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  {user?.role === 'admin' && (
+                    <DropdownMenuItem onClick={() => navigate('/admin/dashboard')}>
+                      <LayoutDashboard className="h-4 w-4 mr-2" />
+                      {t('Admin Dashboard', 'অ্যাডমিন ড্যাশবোর্ড')}
+                    </DropdownMenuItem>
+                  )}
+                  {user?.role === 'vendor' && (
+                    <DropdownMenuItem onClick={() => navigate('/vendor/dashboard')}>
+                      <LayoutDashboard className="h-4 w-4 mr-2" />
+                      {t('Dashboard', 'ড্যাশবোর্ড')}
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem onClick={() => navigate('/valuation/history')}>
+                    <History className="h-4 w-4 mr-2" />
+                    {t('My Valuations', 'আমার মূল্যায়ন')}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleLogout} className="text-destructive">
+                    <LogOut className="h-4 w-4 mr-2" />
+                    {t('Logout', 'লগআউট')}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Link to="/auth" className="hover:text-accent transition-colors">
+                {t('Login', 'লগইন')}
+              </Link>
+            )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="text-primary-foreground hover:text-accent hover:bg-primary/80">
+                  <Globe className="h-4 w-4 mr-1" />
+                  {language === 'en' ? 'EN' : 'বাং'}
+                  <ChevronDown className="h-3 w-3 ml-1" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setLanguage('en')}>English</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setLanguage('bn')}>বাংলা</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </div>
 
@@ -97,57 +146,6 @@ const Header = () => {
             ))}
           </nav>
 
-          {/* CTA Button & Auth */}
-          <div className="hidden lg:flex items-center gap-3">
-            {isAuthenticated ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="gap-2">
-                    <User className="h-4 w-4" />
-                    {user?.name || user?.email}
-                    <ChevronDown className="h-3 w-3" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem className="text-muted-foreground text-xs">
-                    {user?.role === 'admin' ? 'Admin Account' : user?.role === 'vendor' ? 'Vendor Account' : 'Buyer Account'}
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  {user?.role === 'admin' && (
-                    <DropdownMenuItem onClick={() => navigate('/admin/dashboard')}>
-                      <LayoutDashboard className="h-4 w-4 mr-2" />
-                      {t('Admin Dashboard', 'অ্যাডমিন ড্যাশবোর্ড')}
-                    </DropdownMenuItem>
-                  )}
-                  {user?.role === 'vendor' && (
-                    <DropdownMenuItem onClick={() => navigate('/vendor/dashboard')}>
-                      <LayoutDashboard className="h-4 w-4 mr-2" />
-                      {t('Dashboard', 'ড্যাশবোর্ড')}
-                    </DropdownMenuItem>
-                  )}
-                  <DropdownMenuItem onClick={() => navigate('/valuation/history')}>
-                    <History className="h-4 w-4 mr-2" />
-                    {t('My Valuations', 'আমার মূল্যায়ন')}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleLogout} className="text-destructive">
-                    <LogOut className="h-4 w-4 mr-2" />
-                    {t('Logout', 'লগআউট')}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
-              <Link to="/auth">
-                <Button variant="outline">
-                  {t('Login', 'লগইন')}
-                </Button>
-              </Link>
-            )}
-            <Link to="/sell">
-              <Button className="bg-gradient-gold text-primary hover:opacity-90 shadow-gold font-semibold">
-                {t('List Your Property', 'আপনার সম্পত্তি লিস্ট করুন')}
-              </Button>
-            </Link>
-          </div>
 
           {/* Mobile Menu Button */}
           <button
