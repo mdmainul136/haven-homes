@@ -12,6 +12,7 @@ import { Separator } from '@/components/ui/separator';
 import Layout from '@/components/layout/Layout';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
+import ProjectInquiryForm from '@/components/ProjectInquiryForm';
 
 interface DevelopmentProject {
   id: string;
@@ -397,23 +398,11 @@ const ProjectDetails = () => {
                 </CardContent>
               </Card>
 
-              {/* Contact CTA */}
-              <Card className="bg-primary text-primary-foreground">
-                <CardContent className="p-6 text-center">
-                  <h3 className="text-lg font-semibold mb-2">
-                    {t('Interested in this project?', 'এই প্রকল্পে আগ্রহী?')}
-                  </h3>
-                  <p className="text-primary-foreground/80 text-sm mb-4">
-                    {t('Contact our sales team for more information and booking details.', 
-                       'আরও তথ্য এবং বুকিং বিস্তারিত জানতে আমাদের সেলস টিমের সাথে যোগাযোগ করুন।')}
-                  </p>
-                  <Link to="/contact">
-                    <Button variant="secondary" className="w-full">
-                      {t('Contact Sales', 'সেলসের সাথে যোগাযোগ')}
-                    </Button>
-                  </Link>
-                </CardContent>
-              </Card>
+              {/* Inquiry Form */}
+              <ProjectInquiryForm 
+                projectId={project.id} 
+                projectName={t(project.name, project.name_bn || project.name)} 
+              />
             </div>
           </div>
         </div>
