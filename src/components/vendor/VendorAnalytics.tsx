@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { analyticsApi } from '@/lib/mongodb-api';
+import { analyticsApi } from '@/lib/supabase-api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, Eye, Building2, MessageSquare, TrendingUp } from 'lucide-react';
 
@@ -12,7 +12,6 @@ interface Analytics {
     pending: number;
     rejected: number;
   };
-  recentViews: Array<{ date: string; views: number }>;
 }
 
 interface VendorAnalyticsProps {

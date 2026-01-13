@@ -1,32 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { propertiesApi } from '@/lib/mongodb-api';
+import { supabase } from '@/integrations/supabase/client';
 import { properties as staticProperties, Property as StaticProperty } from '@/data/properties';
-
-export interface MongoProperty {
-  _id: string;
-  title: string;
-  titleBn?: string;
-  description?: string;
-  descriptionBn?: string;
-  price: number;
-  priceDisplay?: string;
-  location: string;
-  locationBn?: string;
-  type: string;
-  listingType?: 'sale' | 'rent' | 'project';
-  status?: string;
-  bedrooms?: number;
-  bathrooms?: number;
-  area?: number;
-  areaDisplay?: string;
-  images?: string[];
-  amenities?: string[];
-  featured?: boolean;
-  isOurProject?: boolean;
-  vendorId?: string;
-  views?: number;
-  createdAt?: string;
-}
 
 export interface NormalizedProperty {
   id: string;
@@ -47,41 +21,65 @@ export interface NormalizedProperty {
   descriptionBn?: string;
   amenities?: string[];
   isOurProject?: boolean;
+  vendorId?: string;
+  views?: number;
 }
 
-function normalizeMongoProperty(prop: MongoProperty): NormalizedProperty {
-  const formatPrice = (price: number, listingType?: string) => {
-    if (listingType === 'rent') {
-      return `৳ ${(price / 1000).toFixed(0)}K/month`;
-    }
-    if (price >= 10000000) {
-      return `৳ ${(price / 10000000).toFixed(1)} Crore`;
-    }
-    if (price >= 100000) {
-      return `৳ ${(price / 100000).toFixed(1)} Lakh`;
-    }
-    return `৳ ${price.toLocaleString()}`;
-  };
+interface SupabaseProperty {
+  id: string;
+  title: string;
+  description: string | null;
+  price: number;
+  location: string;
+  property_type: string;
+  listing_type: string;
+  status: string | null;
+  bedrooms: number | null;
+  bathrooms: number | null;
+  area: number | null;
+  images: string[] | null;
+  amenities: string[] | null;
+  featured: boolean | null;
+  is_our_project: boolean | null;
+  vendor_id: string;
+  views: number | null;
+  created_at: string;
+}
 
+function formatPrice(price: number, listingType?: string): string {
+  if (listingType === 'rent') {
+    return `৳ ${(price / 1000).toFixed(0)}K/month`;
+  }
+  if (price >= 10000000) {
+    return `৳ ${(price / 10000000).toFixed(1)} Crore`;
+  }
+  if (price >= 100000) {
+    return `৳ ${(price / 100000).toFixed(1)} Lakh`;
+  }
+  return `৳ ${price.toLocaleString()}`;
+}
+
+function normalizeSupabaseProperty(prop: SupabaseProperty): NormalizedProperty {
   return {
-    id: prop._id,
+    id: prop.id,
     image: prop.images?.[0] || '/placeholder.svg',
     title: prop.title,
-    titleBn: prop.titleBn || prop.title,
+    titleBn: prop.title, // Can be extended to support Bengali
     location: prop.location,
-    locationBn: prop.locationBn || prop.location,
-    price: prop.priceDisplay || formatPrice(prop.price, prop.listingType),
-    priceBn: prop.priceDisplay || formatPrice(prop.price, prop.listingType),
-    bedrooms: prop.bedrooms,
-    bathrooms: prop.bathrooms,
-    area: prop.areaDisplay || (prop.area ? `${prop.area} sqft` : ''),
-    type: (prop.listingType as 'sale' | 'rent' | 'project') || 'sale',
-    status: prop.status as 'ready' | 'under-construction' | 'upcoming',
-    featured: prop.featured,
-    description: prop.description,
-    descriptionBn: prop.descriptionBn,
-    amenities: prop.amenities,
-    isOurProject: prop.isOurProject,
+    locationBn: prop.location, // Can be extended to support Bengali
+    price: formatPrice(prop.price, prop.listing_type),
+    priceBn: formatPrice(prop.price, prop.listing_type),
+    bedrooms: prop.bedrooms || undefined,
+    bathrooms: prop.bathrooms || undefined,
+    area: prop.area ? `${prop.area} sqft` : '',
+    type: (prop.listing_type as 'sale' | 'rent' | 'project') || 'sale',
+    status: prop.status as 'ready' | 'under-construction' | 'upcoming' | undefined,
+    featured: prop.featured || false,
+    description: prop.description || undefined,
+    amenities: prop.amenities || undefined,
+    isOurProject: prop.is_our_project || false,
+    vendorId: prop.vendor_id,
+    views: prop.views || 0,
   };
 }
 
@@ -95,31 +93,38 @@ export function useProperties(options: UsePropertiesOptions = {}) {
   const [properties, setProperties] = useState<NormalizedProperty[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isFromMongo, setIsFromMongo] = useState(false);
+  const [isFromSupabase, setIsFromSupabase] = useState(false);
 
   const fetchProperties = useCallback(async () => {
     setIsLoading(true);
     setError(null);
 
     try {
-      const filters: Record<string, unknown> = { status: 'approved' };
-      
+      let query = supabase
+        .from('properties')
+        .select('*')
+        .eq('status', 'approved');
+
       if (options.listingType && options.listingType !== 'all') {
-        filters.listingType = options.listingType;
+        query = query.eq('listing_type', options.listingType);
       }
       if (options.featured !== undefined) {
-        filters.featured = options.featured;
+        query = query.eq('featured', options.featured);
       }
       if (options.isOurProject !== undefined) {
-        filters.isOurProject = options.isOurProject;
+        query = query.eq('is_our_project', options.isOurProject);
       }
 
-      const response = await propertiesApi.getAll(filters);
+      const { data, error: fetchError } = await query.order('created_at', { ascending: false });
 
-      if (response.success && response.data && Array.isArray(response.data) && response.data.length > 0) {
-        const normalized = (response.data as MongoProperty[]).map(normalizeMongoProperty);
+      if (fetchError) {
+        throw fetchError;
+      }
+
+      if (data && data.length > 0) {
+        const normalized = data.map(normalizeSupabaseProperty);
         setProperties(normalized);
-        setIsFromMongo(true);
+        setIsFromSupabase(true);
       } else {
         // Fallback to static data
         let filtered = [...staticProperties];
@@ -139,7 +144,7 @@ export function useProperties(options: UsePropertiesOptions = {}) {
         }
 
         setProperties(filtered as NormalizedProperty[]);
-        setIsFromMongo(false);
+        setIsFromSupabase(false);
       }
     } catch (err) {
       console.error('Error fetching properties:', err);
@@ -155,7 +160,7 @@ export function useProperties(options: UsePropertiesOptions = {}) {
       }
 
       setProperties(filtered as NormalizedProperty[]);
-      setIsFromMongo(false);
+      setIsFromSupabase(false);
       setError('Using cached data');
     } finally {
       setIsLoading(false);
@@ -166,5 +171,5 @@ export function useProperties(options: UsePropertiesOptions = {}) {
     fetchProperties();
   }, [fetchProperties]);
 
-  return { properties, isLoading, error, isFromMongo, refetch: fetchProperties };
+  return { properties, isLoading, error, isFromSupabase, refetch: fetchProperties };
 }
