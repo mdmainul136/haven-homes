@@ -19,10 +19,16 @@ import PropertyDetails from "./pages/PropertyDetails";
 import AdvancedSearch from "./pages/AdvancedSearch";
 import Auth from "./pages/Auth";
 import VendorDashboard from "./pages/VendorDashboard";
-import AdminDashboard from "./pages/AdminDashboard";
 import PropertyValuation from "./pages/PropertyValuation";
 import ValuationHistory from "./pages/ValuationHistory";
 import NotFound from "./pages/NotFound";
+
+// Admin imports
+import AdminLayout from "./components/admin/AdminLayout";
+import AdminOverview from "./components/admin/AdminOverview";
+import AdminPropertyManagement from "./components/admin/AdminPropertyManagement";
+import AdminUserManagement from "./components/admin/AdminUserManagement";
+import AdminRoleManagement from "./components/admin/AdminRoleManagement";
 
 const queryClient = new QueryClient();
 
@@ -39,7 +45,15 @@ const App = () => (
                 <Route path="/" element={<Index />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/vendor/dashboard" element={<VendorDashboard />} />
-                <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                
+                {/* Admin Routes with Layout */}
+                <Route path="/admin" element={<AdminLayout />}>
+                  <Route index element={<AdminOverview />} />
+                  <Route path="properties" element={<AdminPropertyManagement />} />
+                  <Route path="users" element={<AdminUserManagement />} />
+                  <Route path="roles" element={<AdminRoleManagement />} />
+                </Route>
+                
                 <Route path="/buy" element={<Buy />} />
                 <Route path="/rent" element={<Rent />} />
                 <Route path="/projects" element={<Projects />} />
