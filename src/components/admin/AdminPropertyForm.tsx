@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { Upload, X, Image as ImageIcon, Loader2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -63,6 +64,7 @@ interface Property {
   description?: string;
   featured?: boolean;
   is_our_project?: boolean;
+  images?: string[];
 }
 
 interface AdminPropertyFormProps {
@@ -80,6 +82,9 @@ export default function AdminPropertyForm({
 }: AdminPropertyFormProps) {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [uploadingImages, setUploadingImages] = useState(false);
+  const [images, setImages] = useState<string[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<PropertyFormValues>({
     resolver: zodResolver(propertySchema),
@@ -115,6 +120,7 @@ export default function AdminPropertyForm({
         featured: property.featured || false,
         is_our_project: property.is_our_project || false,
       });
+      setImages(property.images || []);
     } else {
       form.reset({
         title: '',
@@ -130,8 +136,70 @@ export default function AdminPropertyForm({
         featured: false,
         is_our_project: false,
       });
+      setImages([]);
     }
-  }, [property, form]);
+  }, [property, form, open]);
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploadingImages(true);
+    const uploadedUrls: string[] = [];
+
+    try {
+      for (const file of Array.from(files)) {
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+          toast.error(`${file.name} is not a valid image file`);
+          continue;
+        }
+
+        // Validate file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+          toast.error(`${file.name} is too large. Max size is 5MB`);
+          continue;
+        }
+
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${user?.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+        const { data, error } = await supabase.storage
+          .from('property-images')
+          .upload(fileName, file);
+
+        if (error) {
+          console.error('Upload error:', error);
+          toast.error(`Failed to upload ${file.name}`);
+          continue;
+        }
+
+        // Get public URL
+        const { data: urlData } = supabase.storage
+          .from('property-images')
+          .getPublicUrl(data.path);
+
+        uploadedUrls.push(urlData.publicUrl);
+      }
+
+      if (uploadedUrls.length > 0) {
+        setImages((prev) => [...prev, ...uploadedUrls]);
+        toast.success(`${uploadedUrls.length} image(s) uploaded successfully`);
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error('Failed to upload images');
+    } finally {
+      setUploadingImages(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const removeImage = (index: number) => {
+    setImages((prev) => prev.filter((_, i) => i !== index));
+  };
 
   const onSubmit = async (values: PropertyFormValues) => {
     setLoading(true);
@@ -140,7 +208,10 @@ export default function AdminPropertyForm({
         // Update existing property
         const { error } = await supabase
           .from('properties')
-          .update(values)
+          .update({
+            ...values,
+            images,
+          })
           .eq('id', property.id);
 
         if (error) throw error;
@@ -161,6 +232,7 @@ export default function AdminPropertyForm({
           featured: values.featured || false,
           is_our_project: values.is_our_project || false,
           vendor_id: user?.id as string,
+          images,
         }]);
 
         if (error) throw error;
@@ -186,6 +258,77 @@ export default function AdminPropertyForm({
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            {/* Image Upload Section */}
+            <div className="space-y-3">
+              <FormLabel>Property Images</FormLabel>
+              
+              {/* Upload Area */}
+              <div
+                className="relative flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted/50 p-6 transition-colors hover:border-primary/50 hover:bg-muted"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={handleImageUpload}
+                  disabled={uploadingImages}
+                />
+                {uploadingImages ? (
+                  <div className="flex flex-col items-center gap-2">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    <p className="text-sm text-muted-foreground">Uploading...</p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center gap-2 cursor-pointer">
+                    <div className="rounded-full bg-primary/10 p-3">
+                      <Upload className="h-6 w-6 text-primary" />
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm font-medium text-foreground">
+                        Click to upload images
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        PNG, JPG, WEBP up to 5MB each
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Image Preview Grid */}
+              {images.length > 0 && (
+                <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+                  {images.map((url, index) => (
+                    <div
+                      key={index}
+                      className="group relative aspect-square overflow-hidden rounded-lg border border-border"
+                    >
+                      <img
+                        src={url}
+                        alt={`Property image ${index + 1}`}
+                        className="h-full w-full object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeImage(index)}
+                        className="absolute right-1 top-1 rounded-full bg-destructive p-1 text-destructive-foreground opacity-0 transition-opacity group-hover:opacity-100"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                      {index === 0 && (
+                        <span className="absolute bottom-1 left-1 rounded bg-primary px-1.5 py-0.5 text-[10px] font-medium text-primary-foreground">
+                          Main
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <FormField
               control={form.control}
               name="title"
@@ -393,7 +536,7 @@ export default function AdminPropertyForm({
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={loading}>
+              <Button type="submit" disabled={loading || uploadingImages}>
                 {loading ? 'Saving...' : property ? 'Update Property' : 'Create Property'}
               </Button>
             </div>
