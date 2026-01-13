@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
-import { inquiriesApi } from '@/lib/mongodb-api';
+import { inquiriesApi } from '@/lib/supabase-api';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Loader2, MessageSquare, Mail, Phone, CheckCircle, Clock, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -14,15 +13,15 @@ import {
 } from '@/components/ui/select';
 
 interface Inquiry {
-  _id: string;
-  propertyId: string;
+  id: string;
+  property_id: string;
   propertyTitle?: string;
   name: string;
   email: string;
   phone?: string;
   message: string;
   status: string;
-  createdAt: string;
+  created_at: string;
 }
 
 interface VendorInquiriesProps {
@@ -54,7 +53,7 @@ export default function VendorInquiries({ vendorId }: VendorInquiriesProps) {
 
     if (response.success) {
       setInquiries(inquiries.map(inq => 
-        inq._id === inquiryId ? { ...inq, status: newStatus } : inq
+        inq.id === inquiryId ? { ...inq, status: newStatus } : inq
       ));
       toast.success('Status updated');
     } else {
@@ -64,7 +63,7 @@ export default function VendorInquiries({ vendorId }: VendorInquiriesProps) {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'new':
+      case 'pending':
         return <Badge className="bg-blue-500/10 text-blue-600 border-blue-500/20"><Clock className="h-3 w-3 mr-1" />New</Badge>;
       case 'contacted':
         return <Badge className="bg-yellow-500/10 text-yellow-600 border-yellow-500/20"><MessageSquare className="h-3 w-3 mr-1" />Contacted</Badge>;
@@ -115,7 +114,7 @@ export default function VendorInquiries({ vendorId }: VendorInquiriesProps) {
       ) : (
         <div className="space-y-4">
           {inquiries.map((inquiry) => (
-            <Card key={inquiry._id}>
+            <Card key={inquiry.id}>
               <CardContent className="p-4">
                 <div className="flex flex-col lg:flex-row gap-4">
                   <div className="flex-1">
@@ -123,7 +122,7 @@ export default function VendorInquiries({ vendorId }: VendorInquiriesProps) {
                       <div>
                         <h3 className="font-semibold">{inquiry.name}</h3>
                         <p className="text-sm text-muted-foreground">
-                          {inquiry.propertyTitle || `Property ID: ${inquiry.propertyId}`}
+                          {inquiry.propertyTitle || `Property ID: ${inquiry.property_id}`}
                         </p>
                       </div>
                       {getStatusBadge(inquiry.status)}
@@ -151,7 +150,7 @@ export default function VendorInquiries({ vendorId }: VendorInquiriesProps) {
                         </a>
                       )}
                       <span className="text-muted-foreground">
-                        {formatDate(inquiry.createdAt)}
+                        {formatDate(inquiry.created_at)}
                       </span>
                     </div>
                   </div>
@@ -159,18 +158,18 @@ export default function VendorInquiries({ vendorId }: VendorInquiriesProps) {
                   <div className="flex items-center gap-2 lg:flex-col lg:items-end">
                     <Select
                       value={inquiry.status}
-                      onValueChange={(value) => handleStatusChange(inquiry._id, value)}
-                      disabled={updatingId === inquiry._id}
+                      onValueChange={(value) => handleStatusChange(inquiry.id, value)}
+                      disabled={updatingId === inquiry.id}
                     >
                       <SelectTrigger className="w-[140px]">
-                        {updatingId === inquiry._id ? (
+                        {updatingId === inquiry.id ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
                           <SelectValue />
                         )}
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="new">New</SelectItem>
+                        <SelectItem value="pending">New</SelectItem>
                         <SelectItem value="contacted">Contacted</SelectItem>
                         <SelectItem value="closed">Closed</SelectItem>
                         <SelectItem value="rejected">Rejected</SelectItem>

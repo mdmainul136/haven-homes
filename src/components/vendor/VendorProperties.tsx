@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { propertiesApi } from '@/lib/mongodb-api';
+import { propertiesApi } from '@/lib/supabase-api';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Edit, Trash2, Eye, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -18,15 +18,19 @@ import {
 } from '@/components/ui/alert-dialog';
 
 interface Property {
-  _id: string;
+  id: string;
   title: string;
   price: number;
   location: string;
-  type: string;
+  property_type: string;
   status: string;
   views: number;
-  images: string[];
-  createdAt: string;
+  images: string[] | null;
+  created_at: string;
+  description?: string;
+  bedrooms?: number;
+  bathrooms?: number;
+  area?: number;
 }
 
 interface VendorPropertiesProps {
@@ -58,12 +62,12 @@ export default function VendorProperties({ vendorId }: VendorPropertiesProps) {
     if (!deleteId) return;
     
     setIsDeleting(true);
-    const response = await propertiesApi.delete(deleteId, vendorId);
+    const response = await propertiesApi.delete(deleteId);
     setIsDeleting(false);
     
     if (response.success) {
       toast.success('Property deleted successfully');
-      setProperties(properties.filter(p => p._id !== deleteId));
+      setProperties(properties.filter(p => p.id !== deleteId));
     } else {
       toast.error(response.error || 'Failed to delete property');
     }
@@ -127,7 +131,7 @@ export default function VendorProperties({ vendorId }: VendorPropertiesProps) {
       ) : (
         <div className="grid gap-4">
           {properties.map((property) => (
-            <Card key={property._id}>
+            <Card key={property.id}>
               <CardContent className="p-4">
                 <div className="flex flex-col sm:flex-row gap-4">
                   <div className="w-full sm:w-32 h-24 bg-muted rounded-lg overflow-hidden flex-shrink-0">
@@ -157,7 +161,7 @@ export default function VendorProperties({ vendorId }: VendorPropertiesProps) {
                       <span className="font-medium text-primary">
                         ৳{property.price?.toLocaleString()}
                       </span>
-                      <span className="text-muted-foreground">{property.type}</span>
+                      <span className="text-muted-foreground">{property.property_type}</span>
                       <span className="text-muted-foreground flex items-center gap-1">
                         <Eye className="h-3 w-3" />
                         {property.views || 0} views
@@ -172,7 +176,7 @@ export default function VendorProperties({ vendorId }: VendorPropertiesProps) {
                       variant="outline"
                       size="sm"
                       className="text-destructive hover:text-destructive"
-                      onClick={() => setDeleteId(property._id)}
+                      onClick={() => setDeleteId(property.id)}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>

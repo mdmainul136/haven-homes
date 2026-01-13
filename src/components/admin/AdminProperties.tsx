@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import { adminApi } from '@/lib/mongodb-api';
+import { adminApi } from '@/lib/supabase-api';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Check, X, Eye, MapPin, Home, Clock } from 'lucide-react';
+import { Check, X, MapPin, Home, Clock } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,15 +17,15 @@ import {
 } from '@/components/ui/alert-dialog';
 
 interface Property {
-  _id: string;
+  id: string;
   title: string;
   price: number;
   location: string;
-  type: string;
+  property_type: string;
   status: string;
-  images?: string[];
-  createdAt: string;
-  vendorId: string;
+  images?: string[] | null;
+  created_at: string;
+  vendor_id: string;
   bedrooms?: number;
   bathrooms?: number;
   area?: number;
@@ -147,7 +147,7 @@ const AdminProperties = () => {
 
       <div className="grid gap-4">
         {properties.map((property) => (
-          <Card key={property._id}>
+          <Card key={property.id}>
             <CardContent className="p-0">
               <div className="flex flex-col md:flex-row">
                 {/* Property Image */}
@@ -177,11 +177,11 @@ const AdminProperties = () => {
                         </span>
                         <span className="flex items-center gap-1">
                           <Home className="h-4 w-4" />
-                          {property.type}
+                          {property.property_type}
                         </span>
                         <span className="flex items-center gap-1">
                           <Clock className="h-4 w-4" />
-                          {formatDate(property.createdAt)}
+                          {formatDate(property.created_at)}
                         </span>
                       </div>
 
@@ -211,7 +211,7 @@ const AdminProperties = () => {
                         onClick={() => setActionDialog({
                           open: true,
                           type: 'approve',
-                          propertyId: property._id,
+                          propertyId: property.id,
                           propertyTitle: property.title,
                         })}
                       >
@@ -225,7 +225,7 @@ const AdminProperties = () => {
                         onClick={() => setActionDialog({
                           open: true,
                           type: 'reject',
-                          propertyId: property._id,
+                          propertyId: property.id,
                           propertyTitle: property.title,
                         })}
                       >

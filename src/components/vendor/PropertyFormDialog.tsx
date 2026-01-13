@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { propertiesApi } from '@/lib/mongodb-api';
+import { propertiesApi } from '@/lib/supabase-api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,16 +19,16 @@ interface PropertyFormDialogProps {
   onOpenChange: () => void;
   vendorId: string;
   property?: {
-    _id: string;
+    id: string;
     title: string;
     description?: string;
     price: number;
     location: string;
-    type: string;
+    property_type: string;
     bedrooms?: number;
     bathrooms?: number;
     area?: number;
-    images?: string[];
+    images?: string[] | null;
   } | null;
   onSuccess: () => void;
 }
@@ -46,7 +46,7 @@ export default function PropertyFormDialog({
     description: '',
     price: '',
     location: '',
-    type: 'apartment',
+    property_type: 'apartment',
     bedrooms: '',
     bathrooms: '',
     area: '',
@@ -60,7 +60,7 @@ export default function PropertyFormDialog({
         description: property.description || '',
         price: property.price?.toString() || '',
         location: property.location || '',
-        type: property.type || 'apartment',
+        property_type: property.property_type || 'apartment',
         bedrooms: property.bedrooms?.toString() || '',
         bathrooms: property.bathrooms?.toString() || '',
         area: property.area?.toString() || '',
@@ -72,7 +72,7 @@ export default function PropertyFormDialog({
         description: '',
         price: '',
         location: '',
-        type: 'apartment',
+        property_type: 'apartment',
         bedrooms: '',
         bathrooms: '',
         area: '',
@@ -91,24 +91,27 @@ export default function PropertyFormDialog({
 
     const data = {
       title: formData.title,
-      description: formData.description,
+      description: formData.description || undefined,
       price: parseFloat(formData.price),
       location: formData.location,
-      type: formData.type,
+      property_type: formData.property_type,
       bedrooms: formData.bedrooms ? parseInt(formData.bedrooms) : undefined,
       bathrooms: formData.bathrooms ? parseInt(formData.bathrooms) : undefined,
       area: formData.area ? parseFloat(formData.area) : undefined,
       images: formData.images ? formData.images.split(',').map(s => s.trim()).filter(Boolean) : [],
-      status: 'pending',
     };
 
     setIsSubmitting(true);
 
     let response;
-    if (property?._id) {
-      response = await propertiesApi.update(property._id, data, vendorId);
+    if (property?.id) {
+      response = await propertiesApi.update(property.id, data);
     } else {
-      response = await propertiesApi.create(data, vendorId);
+      response = await propertiesApi.create({
+        ...data,
+        vendor_id: vendorId,
+        listing_type: 'sale',
+      });
     }
 
     setIsSubmitting(false);
@@ -176,10 +179,10 @@ export default function PropertyFormDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="type">Property Type</Label>
+              <Label htmlFor="property_type">Property Type</Label>
               <Select
-                value={formData.type}
-                onValueChange={(value) => setFormData({ ...formData, type: value })}
+                value={formData.property_type}
+                onValueChange={(value) => setFormData({ ...formData, property_type: value })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select type" />
