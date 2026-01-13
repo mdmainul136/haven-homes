@@ -124,34 +124,36 @@ const Development = () => {
               
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {ongoingProjects.map((project) => (
-                  <Card key={project.id} className="overflow-hidden border-0 shadow-card hover:shadow-elevated transition-all">
-                    <div className="relative aspect-video">
-                      <img src={getProjectImage(project)} alt={project.name} className="w-full h-full object-cover" />
-                      <Badge className={`absolute top-4 left-4 ${statusColors[project.status]}`}>
-                        {statusLabels[project.status]}
-                      </Badge>
-                    </div>
-                    <CardContent className="p-6">
-                      <h3 className="text-xl font-semibold text-foreground mb-2">
-                        {t(project.name, project.name_bn || project.name)}
-                      </h3>
-                      <div className="flex items-center gap-1 text-muted-foreground mb-4">
-                        <MapPin className="h-4 w-4" />
-                        <span className="text-sm">{t(project.location, project.location_bn || project.location)}</span>
+                  <Link key={project.id} to={`/development/${project.id}`}>
+                    <Card className="overflow-hidden border-0 shadow-card hover:shadow-elevated transition-all cursor-pointer">
+                      <div className="relative aspect-video">
+                        <img src={getProjectImage(project)} alt={project.name} className="w-full h-full object-cover" />
+                        <Badge className={`absolute top-4 left-4 ${statusColors[project.status]}`}>
+                          {statusLabels[project.status]}
+                        </Badge>
                       </div>
-                      <div className="space-y-2 mb-4">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">{t('Progress', 'অগ্রগতি')}</span>
-                          <span className="font-semibold text-accent">{project.progress}%</span>
+                      <CardContent className="p-6">
+                        <h3 className="text-xl font-semibold text-foreground mb-2">
+                          {t(project.name, project.name_bn || project.name)}
+                        </h3>
+                        <div className="flex items-center gap-1 text-muted-foreground mb-4">
+                          <MapPin className="h-4 w-4" />
+                          <span className="text-sm">{t(project.location, project.location_bn || project.location)}</span>
                         </div>
-                        <Progress value={project.progress} className="h-2" />
-                      </div>
-                      <div className="flex justify-between text-sm text-muted-foreground">
-                        <span>{t('Units', 'ইউনিট')}: {project.total_units || 'N/A'}</span>
-                        <span>{t('Completion', 'সমাপ্তি')}: {formatDate(project.expected_completion_date)}</span>
-                      </div>
-                    </CardContent>
-                  </Card>
+                        <div className="space-y-2 mb-4">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">{t('Progress', 'অগ্রগতি')}</span>
+                            <span className="font-semibold text-accent">{project.progress}%</span>
+                          </div>
+                          <Progress value={project.progress} className="h-2" />
+                        </div>
+                        <div className="flex justify-between text-sm text-muted-foreground">
+                          <span>{t('Units', 'ইউনিট')}: {project.total_units || 'N/A'}</span>
+                          <span>{t('Completion', 'সমাপ্তি')}: {formatDate(project.expected_completion_date)}</span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
                 ))}
               </div>
             </div>
@@ -171,27 +173,29 @@ const Development = () => {
               
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {upcomingProjects.map((project) => (
-                  <Card key={project.id} className="overflow-hidden border-0 shadow-card hover:shadow-elevated transition-all">
-                    <div className="relative aspect-video">
-                      <img src={getProjectImage(project)} alt={project.name} className="w-full h-full object-cover" />
-                      <Badge className={`absolute top-4 left-4 ${statusColors[project.status]}`}>
-                        {statusLabels[project.status]}
-                      </Badge>
-                    </div>
-                    <CardContent className="p-6">
-                      <h3 className="text-xl font-semibold text-foreground mb-2">
-                        {t(project.name, project.name_bn || project.name)}
-                      </h3>
-                      <div className="flex items-center gap-1 text-muted-foreground mb-4">
-                        <MapPin className="h-4 w-4" />
-                        <span className="text-sm">{t(project.location, project.location_bn || project.location)}</span>
+                  <Link key={project.id} to={`/development/${project.id}`}>
+                    <Card className="overflow-hidden border-0 shadow-card hover:shadow-elevated transition-all cursor-pointer">
+                      <div className="relative aspect-video">
+                        <img src={getProjectImage(project)} alt={project.name} className="w-full h-full object-cover" />
+                        <Badge className={`absolute top-4 left-4 ${statusColors[project.status]}`}>
+                          {statusLabels[project.status]}
+                        </Badge>
                       </div>
-                      <div className="flex justify-between text-sm text-muted-foreground">
-                        <span>{t('Units', 'ইউনিট')}: {project.total_units || 'N/A'}</span>
-                        <span>{t('Expected', 'প্রত্যাশিত')}: {formatDate(project.expected_completion_date)}</span>
-                      </div>
-                    </CardContent>
-                  </Card>
+                      <CardContent className="p-6">
+                        <h3 className="text-xl font-semibold text-foreground mb-2">
+                          {t(project.name, project.name_bn || project.name)}
+                        </h3>
+                        <div className="flex items-center gap-1 text-muted-foreground mb-4">
+                          <MapPin className="h-4 w-4" />
+                          <span className="text-sm">{t(project.location, project.location_bn || project.location)}</span>
+                        </div>
+                        <div className="flex justify-between text-sm text-muted-foreground">
+                          <span>{t('Units', 'ইউনিট')}: {project.total_units || 'N/A'}</span>
+                          <span>{t('Expected', 'প্রত্যাশিত')}: {formatDate(project.expected_completion_date)}</span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
                 ))}
               </div>
             </div>
@@ -211,27 +215,29 @@ const Development = () => {
               
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {completedProjects.map((project) => (
-                  <Card key={project.id} className="overflow-hidden border-0 shadow-card hover:shadow-elevated transition-all">
-                    <div className="relative aspect-video">
-                      <img src={getProjectImage(project)} alt={project.name} className="w-full h-full object-cover" />
-                      <Badge className={`absolute top-4 left-4 ${statusColors[project.status]}`}>
-                        {statusLabels[project.status]}
-                      </Badge>
-                    </div>
-                    <CardContent className="p-6">
-                      <h3 className="text-xl font-semibold text-foreground mb-2">
-                        {t(project.name, project.name_bn || project.name)}
-                      </h3>
-                      <div className="flex items-center gap-1 text-muted-foreground mb-4">
-                        <MapPin className="h-4 w-4" />
-                        <span className="text-sm">{t(project.location, project.location_bn || project.location)}</span>
+                  <Link key={project.id} to={`/development/${project.id}`}>
+                    <Card className="overflow-hidden border-0 shadow-card hover:shadow-elevated transition-all cursor-pointer">
+                      <div className="relative aspect-video">
+                        <img src={getProjectImage(project)} alt={project.name} className="w-full h-full object-cover" />
+                        <Badge className={`absolute top-4 left-4 ${statusColors[project.status]}`}>
+                          {statusLabels[project.status]}
+                        </Badge>
                       </div>
-                      <div className="flex justify-between text-sm text-muted-foreground">
-                        <span>{t('Units', 'ইউনিট')}: {project.total_units || 'N/A'}</span>
-                        <span>{t('Completed', 'সম্পন্ন')}: {formatDate(project.actual_completion_date)}</span>
-                      </div>
-                    </CardContent>
-                  </Card>
+                      <CardContent className="p-6">
+                        <h3 className="text-xl font-semibold text-foreground mb-2">
+                          {t(project.name, project.name_bn || project.name)}
+                        </h3>
+                        <div className="flex items-center gap-1 text-muted-foreground mb-4">
+                          <MapPin className="h-4 w-4" />
+                          <span className="text-sm">{t(project.location, project.location_bn || project.location)}</span>
+                        </div>
+                        <div className="flex justify-between text-sm text-muted-foreground">
+                          <span>{t('Units', 'ইউনিট')}: {project.total_units || 'N/A'}</span>
+                          <span>{t('Completed', 'সম্পন্ন')}: {formatDate(project.actual_completion_date)}</span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
                 ))}
               </div>
             </div>

@@ -13,6 +13,7 @@ import Rent from "./pages/Rent";
 import Projects from "./pages/Projects";
 import Sell from "./pages/Sell";
 import Development from "./pages/Development";
+import ProjectDetails from "./pages/ProjectDetails";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
 import PropertyDetails from "./pages/PropertyDetails";
@@ -61,6 +62,7 @@ const App = () => (
                 <Route path="/projects" element={<Projects />} />
                 <Route path="/sell" element={<Sell />} />
                 <Route path="/development" element={<Development />} />
+                <Route path="/development/:id" element={<ProjectDetails />} />
                 <Route path="/about" element={<About />} />
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/property/:id" element={<PropertyDetails />} />
