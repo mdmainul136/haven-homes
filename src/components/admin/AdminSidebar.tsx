@@ -1,4 +1,4 @@
-import { Building2, Users, Shield, BarChart3, Settings, Home, LogOut } from 'lucide-react';
+import { Building2, Users, Shield, BarChart3, Home, LogOut, HardHat } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 const menuItems = [
   { icon: BarChart3, label: 'Dashboard', path: '/admin' },
   { icon: Building2, label: 'Properties', path: '/admin/properties' },
+  { icon: HardHat, label: 'Development Projects', path: '/admin/development' },
   { icon: Users, label: 'Users', path: '/admin/users' },
   { icon: Shield, label: 'Roles', path: '/admin/roles' },
 ];
