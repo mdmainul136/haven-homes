@@ -29,6 +29,7 @@ import AdminOverview from "./components/admin/AdminOverview";
 import AdminPropertyManagement from "./components/admin/AdminPropertyManagement";
 import AdminUserManagement from "./components/admin/AdminUserManagement";
 import AdminRoleManagement from "./components/admin/AdminRoleManagement";
+import AdminDevelopmentProjects from "./components/admin/AdminDevelopmentProjects";
 
 const queryClient = new QueryClient();
 
@@ -50,6 +51,7 @@ const App = () => (
                 <Route path="/admin" element={<AdminLayout />}>
                   <Route index element={<AdminOverview />} />
                   <Route path="properties" element={<AdminPropertyManagement />} />
+                  <Route path="development" element={<AdminDevelopmentProjects />} />
                   <Route path="users" element={<AdminUserManagement />} />
                   <Route path="roles" element={<AdminRoleManagement />} />
                 </Route>

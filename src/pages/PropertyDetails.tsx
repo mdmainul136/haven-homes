@@ -1,9 +1,9 @@
 import { useParams, Link } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   MapPin, Bed, Bath, Square, Heart, Share2, ArrowLeft, 
   Check, Phone, Mail, Calendar, ChevronLeft, ChevronRight,
-  Building2, Car, Shield, Waves, Trees, Dumbbell
+  Building2, Car, Shield, Waves, Trees, Dumbbell, Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,11 +12,32 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { properties } from '@/data/properties';
 import Layout from '@/components/layout/Layout';
 import MortgageCalculator from '@/components/MortgageCalculator';
 import ScheduleViewing from '@/components/ScheduleViewing';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+
+interface SupabaseProperty {
+  id: string;
+  title: string;
+  description?: string;
+  price: number;
+  location: string;
+  address?: string;
+  property_type: string;
+  listing_type: string;
+  bedrooms?: number;
+  bathrooms?: number;
+  area?: number;
+  amenities?: string[];
+  images?: string[];
+  featured?: boolean;
+  is_our_project?: boolean;
+  status: string;
+  views?: number;
+  vendor_id: string;
+}
 
 const amenityIcons: Record<string, React.ElementType> = {
   'Swimming Pool': Waves,
@@ -34,10 +55,21 @@ const amenityIcons: Record<string, React.ElementType> = {
   '24/7 Security': Shield,
 };
 
+const formatPrice = (price: number, listingType: string) => {
+  if (price >= 10000000) {
+    return `৳ ${(price / 10000000).toFixed(2)} Crore${listingType === 'rent' ? '/month' : ''}`;
+  } else if (price >= 100000) {
+    return `৳ ${(price / 100000).toFixed(2)} Lakh${listingType === 'rent' ? '/month' : ''}`;
+  }
+  return `৳ ${price.toLocaleString()}${listingType === 'rent' ? '/month' : ''}`;
+};
+
 const PropertyDetails = () => {
   const { id } = useParams<{ id: string }>();
   const { t } = useLanguage();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [property, setProperty] = useState<SupabaseProperty | null>(null);
+  const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -45,7 +77,48 @@ const PropertyDetails = () => {
     message: '',
   });
 
-  const property = properties.find((p) => p.id === id);
+  useEffect(() => {
+    const fetchProperty = async () => {
+      if (!id) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('properties')
+          .select('*')
+          .eq('id', id)
+          .maybeSingle();
+
+        if (error) throw error;
+        setProperty(data);
+        
+        // Increment views
+        if (data) {
+          supabase
+            .from('properties')
+            .update({ views: (data.views || 0) + 1 })
+            .eq('id', id)
+            .then(() => {});
+        }
+      } catch (error) {
+        console.error('Error fetching property:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProperty();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <Layout>
+        <div className="min-h-[60vh] flex flex-col items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="mt-4 text-muted-foreground">{t('Loading...', 'লোড হচ্ছে...')}</p>
+        </div>
+      </Layout>
+    );
+  }
 
   if (!property) {
     return (
@@ -62,19 +135,21 @@ const PropertyDetails = () => {
     );
   }
 
-  // Create gallery images array (using the same image for demo)
-  const galleryImages = [property.image, property.image, property.image, property.image];
+  // Use uploaded images from Supabase or placeholder
+  const galleryImages = property.images && property.images.length > 0 
+    ? property.images 
+    : ['/placeholder.svg'];
 
-  const typeLabels = {
+  const typeLabels: Record<string, string> = {
     sale: t('For Sale', 'বিক্রয়ের জন্য'),
     rent: t('For Rent', 'ভাড়ার জন্য'),
     project: t('Project', 'প্রকল্প'),
   };
 
-  const statusLabels = {
-    ready: t('Ready', 'রেডি'),
-    'under-construction': t('Under Construction', 'নির্মাণাধীন'),
-    upcoming: t('Upcoming', 'আসছে'),
+  const statusLabels: Record<string, string> = {
+    approved: t('Active', 'সক্রিয়'),
+    pending: t('Pending', 'অপেক্ষমাণ'),
+    rejected: t('Rejected', 'প্রত্যাখ্যাত'),
   };
 
   const nextImage = () => {
@@ -167,11 +242,11 @@ const PropertyDetails = () => {
             {/* Badges */}
             <div className="absolute top-4 left-4 flex flex-wrap gap-2">
               <Badge className="bg-accent text-accent-foreground font-semibold">
-                {typeLabels[property.type]}
+                {typeLabels[property.listing_type] || property.listing_type}
               </Badge>
               {property.status && (
                 <Badge variant="secondary" className="bg-card text-card-foreground">
-                  {statusLabels[property.status]}
+                  {statusLabels[property.status] || property.status}
                 </Badge>
               )}
               {property.featured && (
@@ -206,14 +281,14 @@ const PropertyDetails = () => {
               {/* Title & Price */}
               <div>
                 <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-3">
-                  {t(property.title, property.titleBn)}
+                  {property.title}
                 </h1>
                 <div className="flex items-center gap-2 text-muted-foreground mb-4">
                   <MapPin className="h-5 w-5" />
-                  <span className="text-lg">{t(property.location, property.locationBn)}</span>
+                  <span className="text-lg">{property.location}</span>
                 </div>
                 <p className="text-3xl font-bold text-accent">
-                  {t(property.price, property.priceBn)}
+                  {formatPrice(property.price, property.listing_type)}
                 </p>
               </div>
 
@@ -314,7 +389,7 @@ const PropertyDetails = () => {
                   </div>
                   <div className="flex items-center gap-2 mt-4 text-muted-foreground">
                     <MapPin className="h-5 w-5 text-accent" />
-                    <span>{t(property.location, property.locationBn)}</span>
+                    <span>{property.location}</span>
                   </div>
                 </CardContent>
               </Card>
@@ -394,7 +469,7 @@ const PropertyDetails = () => {
                         <Mail className="h-5 w-5 text-accent" />
                         {t('Email Agent', 'এজেন্টকে ইমেইল করুন')}
                       </Button>
-                      <ScheduleViewing propertyTitle={t(property.title, property.titleBn)} />
+                      <ScheduleViewing propertyTitle={property.title} />
                     </div>
                   </CardContent>
                 </Card>

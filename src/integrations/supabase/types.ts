@@ -14,6 +14,63 @@ export type Database = {
   }
   public: {
     Tables: {
+      development_projects: {
+        Row: {
+          actual_completion_date: string | null
+          created_at: string
+          description: string | null
+          description_bn: string | null
+          expected_completion_date: string | null
+          id: string
+          images: string[] | null
+          location: string
+          location_bn: string | null
+          name: string
+          name_bn: string | null
+          progress: number
+          start_date: string | null
+          status: string
+          total_units: number | null
+          updated_at: string
+        }
+        Insert: {
+          actual_completion_date?: string | null
+          created_at?: string
+          description?: string | null
+          description_bn?: string | null
+          expected_completion_date?: string | null
+          id?: string
+          images?: string[] | null
+          location: string
+          location_bn?: string | null
+          name: string
+          name_bn?: string | null
+          progress?: number
+          start_date?: string | null
+          status?: string
+          total_units?: number | null
+          updated_at?: string
+        }
+        Update: {
+          actual_completion_date?: string | null
+          created_at?: string
+          description?: string | null
+          description_bn?: string | null
+          expected_completion_date?: string | null
+          id?: string
+          images?: string[] | null
+          location?: string
+          location_bn?: string | null
+          name?: string
+          name_bn?: string | null
+          progress?: number
+          start_date?: string | null
+          status?: string
+          total_units?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       favorites: {
         Row: {
           created_at: string
@@ -125,6 +182,53 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      project_milestones: {
+        Row: {
+          completed_date: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_completed: boolean | null
+          project_id: string
+          sort_order: number | null
+          target_date: string | null
+          title: string
+          title_bn: string | null
+        }
+        Insert: {
+          completed_date?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_completed?: boolean | null
+          project_id: string
+          sort_order?: number | null
+          target_date?: string | null
+          title: string
+          title_bn?: string | null
+        }
+        Update: {
+          completed_date?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_completed?: boolean | null
+          project_id?: string
+          sort_order?: number | null
+          target_date?: string | null
+          title?: string
+          title_bn?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_milestones_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "development_projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       properties: {
         Row: {
