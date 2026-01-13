@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Plus, Search, Edit, Trash2, Eye, Check, X, MoreHorizontal } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Check, X, MoreHorizontal, Star, Building2, Home, Key } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +16,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
@@ -35,6 +36,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import AdminPropertyForm from './AdminPropertyForm';
@@ -60,11 +62,14 @@ interface Property {
   is_our_project?: boolean;
 }
 
+type CategoryFilter = 'all' | 'our_projects' | 'sale' | 'rent' | 'featured';
+
 export default function AdminPropertyManagement() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all');
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; property: Property | null }>({
     open: false,
     property: null,
@@ -135,12 +140,86 @@ export default function AdminPropertyManagement() {
     }
   };
 
+  const handleToggleFeatured = async (propertyId: string, currentValue: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('properties')
+        .update({ featured: !currentValue })
+        .eq('id', propertyId);
+
+      if (error) throw error;
+
+      setProperties(prev =>
+        prev.map(p => (p.id === propertyId ? { ...p, featured: !currentValue } : p))
+      );
+      toast.success(`Property ${!currentValue ? 'marked as featured' : 'removed from featured'}`);
+    } catch (error) {
+      console.error('Error updating featured:', error);
+      toast.error('Failed to update featured status');
+    }
+  };
+
+  const handleToggleOurProject = async (propertyId: string, currentValue: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('properties')
+        .update({ is_our_project: !currentValue })
+        .eq('id', propertyId);
+
+      if (error) throw error;
+
+      setProperties(prev =>
+        prev.map(p => (p.id === propertyId ? { ...p, is_our_project: !currentValue } : p))
+      );
+      toast.success(`Property ${!currentValue ? 'marked as Our Project' : 'removed from Our Projects'}`);
+    } catch (error) {
+      console.error('Error updating our project:', error);
+      toast.error('Failed to update');
+    }
+  };
+
+  const handleChangeListingType = async (propertyId: string, newType: string) => {
+    try {
+      const { error } = await supabase
+        .from('properties')
+        .update({ listing_type: newType })
+        .eq('id', propertyId);
+
+      if (error) throw error;
+
+      setProperties(prev =>
+        prev.map(p => (p.id === propertyId ? { ...p, listing_type: newType } : p))
+      );
+      toast.success(`Property changed to ${newType === 'sale' ? 'For Sale' : 'For Rent'}`);
+    } catch (error) {
+      console.error('Error updating listing type:', error);
+      toast.error('Failed to update listing type');
+    }
+  };
+
   const filteredProperties = properties.filter(property => {
     const matchesSearch =
       property.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       property.location.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'all' || property.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    
+    let matchesCategory = true;
+    switch (categoryFilter) {
+      case 'our_projects':
+        matchesCategory = property.is_our_project === true;
+        break;
+      case 'sale':
+        matchesCategory = property.listing_type === 'sale';
+        break;
+      case 'rent':
+        matchesCategory = property.listing_type === 'rent';
+        break;
+      case 'featured':
+        matchesCategory = property.featured === true;
+        break;
+    }
+    
+    return matchesSearch && matchesStatus && matchesCategory;
   });
 
   const formatPrice = (price: number) => {
@@ -175,6 +254,21 @@ export default function AdminPropertyManagement() {
     );
   }
 
+  const getCategoryCount = (category: CategoryFilter) => {
+    switch (category) {
+      case 'our_projects':
+        return properties.filter(p => p.is_our_project).length;
+      case 'sale':
+        return properties.filter(p => p.listing_type === 'sale').length;
+      case 'rent':
+        return properties.filter(p => p.listing_type === 'rent').length;
+      case 'featured':
+        return properties.filter(p => p.featured).length;
+      default:
+        return properties.length;
+    }
+  };
+
   return (
     <div className="p-8">
       <div className="mb-6 flex items-center justify-between">
@@ -189,6 +283,36 @@ export default function AdminPropertyManagement() {
           Add Property
         </Button>
       </div>
+
+      {/* Category Tabs */}
+      <Tabs value={categoryFilter} onValueChange={(v) => setCategoryFilter(v as CategoryFilter)} className="mb-4">
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="all" className="gap-2">
+            All
+            <Badge variant="secondary" className="ml-1">{getCategoryCount('all')}</Badge>
+          </TabsTrigger>
+          <TabsTrigger value="our_projects" className="gap-2">
+            <Building2 className="h-4 w-4" />
+            Our Projects
+            <Badge variant="secondary" className="ml-1">{getCategoryCount('our_projects')}</Badge>
+          </TabsTrigger>
+          <TabsTrigger value="sale" className="gap-2">
+            <Home className="h-4 w-4" />
+            For Sale
+            <Badge variant="secondary" className="ml-1">{getCategoryCount('sale')}</Badge>
+          </TabsTrigger>
+          <TabsTrigger value="rent" className="gap-2">
+            <Key className="h-4 w-4" />
+            For Rent
+            <Badge variant="secondary" className="ml-1">{getCategoryCount('rent')}</Badge>
+          </TabsTrigger>
+          <TabsTrigger value="featured" className="gap-2">
+            <Star className="h-4 w-4" />
+            Featured
+            <Badge variant="secondary" className="ml-1">{getCategoryCount('featured')}</Badge>
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
 
       <Card className="border-border">
         <CardHeader className="border-b border-border">
@@ -222,7 +346,7 @@ export default function AdminPropertyManagement() {
                 <TableHead>Property</TableHead>
                 <TableHead>Location</TableHead>
                 <TableHead>Price</TableHead>
-                <TableHead>Type</TableHead>
+                <TableHead>Category</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-center">Views</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -239,14 +363,26 @@ export default function AdminPropertyManagement() {
                 filteredProperties.map((property) => (
                   <TableRow key={property.id} className="border-border">
                     <TableCell className="font-medium">
-                      <div className="max-w-[200px] truncate">{property.title}</div>
+                      <div className="flex items-center gap-2">
+                        <div className="max-w-[180px] truncate">{property.title}</div>
+                        {property.featured && (
+                          <Star className="h-4 w-4 fill-warning text-warning" />
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="text-muted-foreground">{property.location}</TableCell>
                     <TableCell>{formatPrice(property.price)}</TableCell>
                     <TableCell>
-                      <Badge variant="outline" className="capitalize">
-                        {property.listing_type}
-                      </Badge>
+                      <div className="flex flex-wrap gap-1">
+                        <Badge variant="outline" className="capitalize">
+                          {property.listing_type === 'sale' ? 'For Sale' : 'For Rent'}
+                        </Badge>
+                        {property.is_our_project && (
+                          <Badge className="bg-primary/10 text-primary border-0">
+                            Our Project
+                          </Badge>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>{getStatusBadge(property.status)}</TableCell>
                     <TableCell className="text-center">{property.views || 0}</TableCell>
@@ -257,13 +393,17 @@ export default function AdminPropertyManagement() {
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
+                        <DropdownMenuContent align="end" className="w-48">
                           <DropdownMenuItem
                             onClick={() => setFormDialog({ open: true, property })}
                           >
                             <Edit className="mr-2 h-4 w-4" />
                             Edit
                           </DropdownMenuItem>
+                          
+                          <DropdownMenuSeparator />
+                          
+                          {/* Status Actions */}
                           {property.status === 'pending' && (
                             <>
                               <DropdownMenuItem
@@ -278,8 +418,46 @@ export default function AdminPropertyManagement() {
                                 <X className="mr-2 h-4 w-4 text-destructive" />
                                 Reject
                               </DropdownMenuItem>
+                              <DropdownMenuSeparator />
                             </>
                           )}
+                          
+                          {/* Category Actions */}
+                          <DropdownMenuItem
+                            onClick={() => handleToggleFeatured(property.id, property.featured || false)}
+                          >
+                            <Star className={`mr-2 h-4 w-4 ${property.featured ? 'fill-warning text-warning' : ''}`} />
+                            {property.featured ? 'Remove Featured' : 'Mark Featured'}
+                          </DropdownMenuItem>
+                          
+                          <DropdownMenuItem
+                            onClick={() => handleToggleOurProject(property.id, property.is_our_project || false)}
+                          >
+                            <Building2 className={`mr-2 h-4 w-4 ${property.is_our_project ? 'text-primary' : ''}`} />
+                            {property.is_our_project ? 'Remove from Our Projects' : 'Add to Our Projects'}
+                          </DropdownMenuItem>
+                          
+                          <DropdownMenuSeparator />
+                          
+                          {/* Listing Type Actions */}
+                          <DropdownMenuItem
+                            onClick={() => handleChangeListingType(property.id, property.listing_type === 'sale' ? 'rent' : 'sale')}
+                          >
+                            {property.listing_type === 'sale' ? (
+                              <>
+                                <Key className="mr-2 h-4 w-4" />
+                                Change to For Rent
+                              </>
+                            ) : (
+                              <>
+                                <Home className="mr-2 h-4 w-4" />
+                                Change to For Sale
+                              </>
+                            )}
+                          </DropdownMenuItem>
+                          
+                          <DropdownMenuSeparator />
+                          
                           <DropdownMenuItem
                             className="text-destructive"
                             onClick={() => setDeleteDialog({ open: true, property })}
