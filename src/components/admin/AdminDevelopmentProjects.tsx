@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Plus, Search, Edit, Trash2, MoreHorizontal, Calendar, Building2, CheckCircle2, Clock, Target } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, MoreHorizontal, Calendar, Building2, CheckCircle2, Clock, Target, ImageIcon } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -49,6 +49,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
+import ProjectImageUpload from './ProjectImageUpload';
 
 interface DevelopmentProject {
   id: string;
@@ -101,6 +102,11 @@ export default function AdminDevelopmentProjects() {
     open: false,
     project: null,
   });
+  const [imagesDialog, setImagesDialog] = useState<{ open: boolean; project: DevelopmentProject | null }>({
+    open: false,
+    project: null,
+  });
+  const [projectImages, setProjectImages] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     name: '',
     name_bn: '',
@@ -471,6 +477,13 @@ export default function AdminDevelopmentProjects() {
                             <Edit className="mr-2 h-4 w-4" />
                             Edit
                           </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => {
+                            setProjectImages(project.images || []);
+                            setImagesDialog({ open: true, project });
+                          }}>
+                            <ImageIcon className="mr-2 h-4 w-4" />
+                            Images
+                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => setMilestonesDialog({ open: true, project })}>
                             <Calendar className="mr-2 h-4 w-4" />
                             Milestones
@@ -700,6 +713,39 @@ export default function AdminDevelopmentProjects() {
                 Add Milestone
               </Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Images Dialog */}
+      <Dialog open={imagesDialog.open} onOpenChange={(open) => !open && setImagesDialog({ open: false, project: null })}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Project Images - {imagesDialog.project?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            {imagesDialog.project && (
+              <ProjectImageUpload
+                projectId={imagesDialog.project.id}
+                images={projectImages}
+                onImagesChange={async (newImages) => {
+                  setProjectImages(newImages);
+                  // Save to database
+                  try {
+                    const { error } = await supabase
+                      .from('development_projects')
+                      .update({ images: newImages })
+                      .eq('id', imagesDialog.project!.id);
+                    
+                    if (error) throw error;
+                    fetchProjects();
+                  } catch (error) {
+                    console.error('Error updating images:', error);
+                    toast.error('Failed to save images');
+                  }
+                }}
+              />
+            )}
           </div>
         </DialogContent>
       </Dialog>
